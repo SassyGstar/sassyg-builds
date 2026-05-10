@@ -1,0 +1,28 @@
+{
+  "myself": 0,
+  "parties": [
+    {
+      "id": 0,
+      "host": "127.0.0.1",
+      "port": 8000,
+      "name": "Party_A"
+    },
+    {
+      "id": 1,
+      "host": "192.168.1.15",
+      "port": 8001,
+      "name": "Party_B"
+    },
+    {
+      "id": 2,
+      "host": "192.168.1.20",
+      "port": 8002,
+      "name": "Party_C"
+    }
+  ],
+  "security_settings": {
+    "protocol": "semi-honest",
+    "use_tls": true,
+    "ca_cert_path": "./certs/ca.pem"
+  }
+}
