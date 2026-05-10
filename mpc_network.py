@@ -27,6 +27,8 @@ class SecuritySettings:
     protocol: str
     use_tls: bool
     ca_cert_path: str
+    cert_path: Optional[str] = None
+    key_path: Optional[str] = None
 
 
 class NetworkConfig:
@@ -85,10 +87,13 @@ class MPCNetwork:
     def _make_ssl_context(self, server_side: bool) -> Optional[ssl.SSLContext]:
         if not self.config.security.use_tls:
             return None
+        sec = self.config.security
         purpose = ssl.Purpose.CLIENT_AUTH if server_side else ssl.Purpose.SERVER_AUTH
-        ctx = ssl.create_default_context(purpose, cafile=self.config.security.ca_cert_path)
+        ctx = ssl.create_default_context(purpose, cafile=sec.ca_cert_path)
         if server_side:
             ctx.verify_mode = ssl.CERT_REQUIRED
+        if sec.cert_path and sec.key_path:
+            ctx.load_cert_chain(certfile=sec.cert_path, keyfile=sec.key_path)
         return ctx
 
     async def _handle_incoming(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
@@ -123,9 +128,10 @@ class MPCNetwork:
         )
 
         # Pre-register futures for peers that will connect to us (higher id peers)
+        loop = asyncio.get_running_loop()
         for peer in self.config.peer_parties():
             if peer.id > self.config.myself:
-                self._pending[peer.id] = asyncio.get_event_loop().create_future()
+                self._pending[peer.id] = loop.create_future()
 
         # Connect to peers with lower id (they are already listening)
         for peer in self.config.peer_parties():
@@ -154,11 +160,12 @@ class MPCNetwork:
         await asyncio.gather(*(ch.send(data) for ch in self.channels.values()))
 
     async def gather(self) -> dict[int, bytes]:
+        party_ids = list(self.channels.keys())
         results = await asyncio.gather(
-            *(ch.recv() for ch in self.channels.values()),
+            *(self.channels[pid].recv() for pid in party_ids),
             return_exceptions=False,
         )
-        return {pid: msg for pid, msg in zip(self.channels.keys(), results)}
+        return dict(zip(party_ids, results))
 
 
 async def main() -> None:
