@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ACE Tier Badges — The Architect Ladder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    ::selection { background: #1E90E8; color: #fff; }
+
+    body {
+      font-family: 'Saira', system-ui, sans-serif;
+      background: radial-gradient(125% 95% at 50% -8%, #1a2b44 0%, #0e1827 42%, #080d16 100%);
+      min-height: 100vh;
+      color: #e6edf5;
+      padding: 56px 48px 64px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page { max-width: 1180px; margin: 0 auto; }
+
+    /* ---- Header ---- */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 44px;
+    }
+    .logo-plate {
+      display: inline-flex;
+      align-items: center;
+      padding: 11px 20px;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #f5f8fc, #e7edf4);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35), inset 0 1px 0 #ffffff;
+      border: 1px solid rgba(255,255,255,0.6);
+    }
+    .logo-plate img { height: 38px; display: block; }
+    .header-meta { text-align: right; }
+    .header-meta .eyebrow {
+      font-size: 11px;
+      letter-spacing: 3.5px;
+      color: #6f88a6;
+      font-weight: 600;
+    }
+    .header-meta .sub {
+      font-size: 12.5px;
+      letter-spacing: 1px;
+      color: #46586f;
+      margin-top: 4px;
+    }
+
+    /* ---- Hero ---- */
+    .hero { margin-bottom: 46px; }
+    .hero h1 {
+      font-size: 46px;
+      line-height: 1.05;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin: 0;
+      color: #f3f7fb;
+    }
+    .hero p {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #9fb1c6;
+      max-width: 680px;
+      margin: 16px 0 0;
+      font-weight: 400;
+    }
+
+    /* ---- Badge Wall ---- */
+    .badge-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 28px;
+      align-items: end;
+    }
+    .badge-cell { display: flex; justify-content: center; }
+    .badge-wrap { position: relative; }
+    .badge-glow {
+      position: absolute;
+      inset: -14% -8% -10%;
+      filter: blur(6px);
+    }
+    .badge-svg {
+      position: relative;
+      width: 100%;
+      height: auto;
+      filter: drop-shadow(0 14px 22px rgba(0,0,0,0.55));
+    }
+    .badge-wrap--lg { width: 214px; }
+    .badge-wrap--lg .badge-glow { inset: -16% -8% -12%; filter: blur(9px); }
+    .badge-wrap--lg .badge-svg { filter: drop-shadow(0 16px 26px rgba(0,0,0,0.6)); }
+    .badge-wrap--sm { width: 206px; }
+
+    /* ---- Progression Rail ---- */
+    .rail-wrap { position: relative; margin: 26px 0 14px; }
+    .rail-line {
+      position: absolute;
+      left: 12.5%; right: 12.5%; top: 19px;
+      height: 2px;
+      background: linear-gradient(90deg, #33445d 0%, #3f6188 40%, #4f86bb 75%, #6aa9e0 100%);
+    }
+    .rail-arrow {
+      position: absolute;
+      top: 13px;
+      font-size: 14px;
+    }
+    .rail-nodes {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+    }
+    .rail-nodes > div { display: flex; justify-content: center; }
+    .rail-node {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 15px;
+    }
+
+    /* ---- Meta cards ---- */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 28px;
+      margin-top: 18px;
+    }
+    .meta-card { text-align: center; padding: 0 6px; }
+    .meta-card .finish-label {
+      font-size: 10.5px;
+      letter-spacing: 2.5px;
+      font-weight: 600;
+    }
+    .meta-card h3 {
+      font-size: 19px;
+      font-weight: 600;
+      margin: 8px 0 0;
+      color: #eef3f8;
+    }
+    .meta-card p {
+      font-size: 13px;
+      line-height: 1.5;
+      color: #93a6bb;
+      margin: 9px auto 0;
+      max-width: 220px;
+    }
+    .meta-card .gate {
+      margin-top: 14px;
+      padding-top: 13px;
+      border-top: 1px solid rgba(120,144,166,0.18);
+    }
+    .meta-card .gate-label {
+      font-size: 9.5px;
+      letter-spacing: 2px;
+      color: #5e7790;
+      font-weight: 600;
+    }
+    .meta-card .gate-text {
+      font-size: 12px;
+      line-height: 1.45;
+      color: #aebdce;
+      margin-top: 5px;
+    }
+
+    /* ---- Versatility panel ---- */
+    .versatility {
+      margin-top: 62px;
+      background: linear-gradient(180deg, #ffffff, #eef2f7);
+      border-radius: 20px;
+      padding: 40px 44px 44px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    }
+    .versatility-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 34px;
+    }
+    .versatility-header .built-label {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: #1E90E8;
+      font-weight: 700;
+    }
+    .versatility-header h2 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      margin: 8px 0 0;
+      color: #0f2238;
+    }
+    .versatility-header .sub-copy {
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: #5b6b7d;
+      max-width: 340px;
+      text-align: right;
+    }
+    .light-rack {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+    .rack-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 22px 10px;
+      border-radius: 14px;
+      background: #f6f8fb;
+      border: 1px solid #e2e8f0;
+    }
+    .rack-card .tier-code {
+      font-weight: 700;
+      font-size: 15px;
+      color: #172a3f;
+      letter-spacing: 1px;
+    }
+    .rack-card .tier-name {
+      font-size: 11px;
+      color: #64748b;
+      text-align: center;
+    }
+    .utility-row {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 28px;
+      margin-top: 30px;
+    }
+    .section-label {
+      font-size: 10.5px;
+      letter-spacing: 2px;
+      color: #75879b;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .chip-list { display: flex; flex-direction: column; gap: 10px; }
+    .chip {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      background: #fff;
+      border: 1px solid #e4e9f0;
+      border-radius: 11px;
+      padding: 9px 14px;
+      box-shadow: 0 1px 2px rgba(20,40,70,0.04);
+    }
+    .chip--aga { border-color: #d7e4f2; box-shadow: 0 1px 3px rgba(30,110,190,0.10); }
+    .chip .chip-code {
+      font-weight: 700;
+      font-size: 13px;
+      color: #172a3f;
+      width: 38px;
+    }
+    .chip--aga .chip-code { color: #0f2238; }
+    .chip .chip-name {
+      font-size: 12.5px;
+      color: #4b5b6e;
+      flex: 1;
+    }
+    .chip--aga .chip-name { color: #3d4f63; }
+    .chip .tier-tag {
+      font-size: 10.5px;
+      letter-spacing: 1px;
+      color: #8a99ab;
+      font-weight: 600;
+    }
+    .chip--aga .tier-tag { color: #2b8fdd; font-weight: 700; }
+
+    .size-ramp-wrap {
+      background: #fff;
+      border: 1px solid #e4e9f0;
+      border-radius: 14px;
+      padding: 22px 24px;
+      box-shadow: 0 1px 2px rgba(20,40,70,0.04);
+      height: calc(100% - 24px);
+    }
+    .size-ramp {
+      display: flex;
+      align-items: flex-end;
+      gap: 22px;
+      height: 100%;
+    }
+    .size-ramp-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .size-ramp-item span {
+      font-size: 10px;
+      color: #94a3b4;
+    }
+
+    /* ---- Footer ---- */
+    .page-footer {
+      margin-top: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-top: 1px solid rgba(120,144,166,0.16);
+      padding-top: 20px;
+    }
+    .footer-note {
+      font-size: 11.5px;
+      color: #607890;
+      letter-spacing: 0.3px;
+    }
+    .footer-conf {
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: #3f566f;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ====== SHARED SVG DEFS ====== -->
+<svg aria-hidden="true" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden">
+  <defs>
+    <pattern id="circuit" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M0 10 H20 M10 0 V20" stroke="#7C90A6" stroke-width="0.6" opacity="0.06"/>
+      <circle cx="10" cy="10" r="1.2" fill="#7C90A6" opacity="0.10"/>
+      <circle cx="0" cy="0" r="1" fill="#7C90A6" opacity="0.07"/>
+      <circle cx="20" cy="20" r="1" fill="#7C90A6" opacity="0.07"/>
+    </pattern>
+
+    <linearGradient id="steelDark" x1="0" y1="0" x2="1" y2="0.2">
+      <stop offset="0" stop-color="#828C98"/><stop offset="1" stop-color="#444E59"/>
+    </linearGradient>
+    <linearGradient id="steelLight" x1="0" y1="0" x2="1" y2="0.2">
+      <stop offset="0" stop-color="#EAEFF4"/><stop offset="1" stop-color="#9DA9B5"/>
+    </linearGradient>
+
+    <!-- AAA gradients -->
+    <linearGradient id="frame-aaa" x1="0" y1="0" x2="0.55" y2="1">
+      <stop offset="0" stop-color="#C2CBD4"/><stop offset="0.18" stop-color="#AEB8C2"/>
+      <stop offset="0.5" stop-color="#828C97"/><stop offset="0.78" stop-color="#5C6571"/>
+      <stop offset="1" stop-color="#3F4853"/>
+    </linearGradient>
+    <radialGradient id="field-aaa" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#2A333F"/><stop offset="1" stop-color="#131A23"/>
+    </radialGradient>
+    <radialGradient id="glow-aaa" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#9FB4C8" stop-opacity="0.34"/>
+      <stop offset="0.55" stop-color="#9FB4C8" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#9FB4C8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ribbon-aaa" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4A535F"/><stop offset="1" stop-color="#2C343E"/>
+    </linearGradient>
+
+    <!-- ACA gradients -->
+    <linearGradient id="frame-aca" x1="0" y1="0" x2="0.55" y2="1">
+      <stop offset="0" stop-color="#F2F6FA"/><stop offset="0.16" stop-color="#DCE4EC"/>
+      <stop offset="0.5" stop-color="#AEBAC7"/><stop offset="0.8" stop-color="#818E9C"/>
+      <stop offset="1" stop-color="#5C6773"/>
+    </linearGradient>
+    <radialGradient id="field-aca" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#11365F"/><stop offset="0.6" stop-color="#0B2444"/>
+      <stop offset="1" stop-color="#061425"/>
+    </radialGradient>
+    <radialGradient id="glow-aca" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#1E90E8" stop-opacity="0.46"/>
+      <stop offset="0.55" stop-color="#1E90E8" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#1E90E8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ribbon-aca" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14507F"/><stop offset="1" stop-color="#0A2747"/>
+    </linearGradient>
+
+    <!-- ADA gradients -->
+    <linearGradient id="frame-ada" x1="0" y1="0" x2="0.55" y2="1">
+      <stop offset="0" stop-color="#E9F1FB"/><stop offset="0.16" stop-color="#C4D6EC"/>
+      <stop offset="0.5" stop-color="#8AAAD0"/><stop offset="0.8" stop-color="#4F76A6"/>
+      <stop offset="1" stop-color="#2F4D74"/>
+    </linearGradient>
+    <radialGradient id="field-ada" cx="0.5" cy="0.42" r="0.72">
+      <stop offset="0" stop-color="#103A6E"/><stop offset="0.6" stop-color="#0A2750"/>
+      <stop offset="1" stop-color="#04101f"/>
+    </radialGradient>
+    <radialGradient id="glow-ada" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#34A8FF" stop-opacity="0.52"/>
+      <stop offset="0.55" stop-color="#34A8FF" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#34A8FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ribbon-ada" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#114A86"/><stop offset="1" stop-color="#08203f"/>
+    </linearGradient>
+
+    <!-- AGA gradients -->
+    <linearGradient id="frame-aga" x1="0" y1="0" x2="0.55" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.14" stop-color="#ECF2F8"/>
+      <stop offset="0.4" stop-color="#D2DEEA"/><stop offset="0.5" stop-color="#C2D4E6"/>
+      <stop offset="0.72" stop-color="#AAB9C8"/><stop offset="1" stop-color="#8896A6"/>
+    </linearGradient>
+    <radialGradient id="field-aga" cx="0.5" cy="0.42" r="0.74">
+      <stop offset="0" stop-color="#0C2138"/><stop offset="0.55" stop-color="#07152a"/>
+      <stop offset="1" stop-color="#02060e"/>
+    </radialGradient>
+    <radialGradient id="glow-aga" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#56BEFF" stop-opacity="0.62"/>
+      <stop offset="0.5" stop-color="#56BEFF" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#56BEFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ribbon-aga" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#173F6A"/><stop offset="1" stop-color="#0A1D36"/>
+    </linearGradient>
+
+    <!-- ====== BADGE SYMBOLS (geometry inlined so gradient fills resolve) ====== -->
+    <symbol id="badge-aaa" viewBox="0 0 240 312">
+      <path d="M30,46 Q30,33 43,33 L197,33 Q210,33 210,46 L210,150 C210,205 168,250 120,298 C72,250 30,205 30,150 Z" fill="url(#frame-aaa)"/>
+      <path d="M30,46 Q30,33 43,33 L197,33 Q210,33 210,46 L210,150 C210,205 168,250 120,298 C72,250 30,205 30,150 Z" fill="none" stroke="#ffffff" stroke-opacity="0.28" stroke-width="1.2"/>
+      <path d="M44,55 Q44,45 54,45 L186,45 Q196,45 196,55 L196,150 C196,192 163,230 120,278 C77,230 44,192 44,150 Z" fill="url(#field-aaa)"/>
+      <ellipse cx="120" cy="150" rx="76" ry="90" fill="url(#glow-aaa)"/>
+      <path d="M44,55 Q44,45 54,45 L186,45 Q196,45 196,55 L196,150 C196,192 163,230 120,278 C77,230 44,192 44,150 Z" fill="url(#circuit)"/>
+      <path d="M44,55 Q44,45 54,45 L186,45 Q196,45 196,55 L196,150 C196,192 163,230 120,278 C77,230 44,192 44,150 Z" fill="none" stroke="#8FA6BC" stroke-opacity="0.50" stroke-width="1.4"/>
+      <path d="M52,64 Q52,55 60,55 L180,55 Q188,55 188,64 L188,150 C188,188 158,223 120,266 C82,223 52,188 52,150 Z" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="1"/>
+      <rect x="87" y="60" width="12" height="5" rx="2.5" fill="#8FA6BC"/>
+      <rect x="105" y="60" width="12" height="5" rx="2.5" fill="#9fb0c0" opacity="0.22"/>
+      <rect x="123" y="60" width="12" height="5" rx="2.5" fill="#9fb0c0" opacity="0.22"/>
+      <rect x="141" y="60" width="12" height="5" rx="2.5" fill="#9fb0c0" opacity="0.22"/>
+      <path d="M120,84 L120,176 L76,176 Z" fill="url(#steelDark)"/>
+      <path d="M120,84 L164,176 L120,176 Z" fill="url(#steelLight)"/>
+      <path d="M120,84 L120,176" stroke="#1b2530" stroke-width="1.4" stroke-opacity="0.5"/>
+      <path d="M120,84 L76,176" stroke="#8FA6BC" stroke-width="3" stroke-linecap="round"/>
+      <path d="M95,148 L145,148 L149,158 L99,158 Z" fill="#8FA6BC"/>
+      <path d="M120,243 L120,270 L108,256 Z" fill="url(#steelDark)"/>
+      <path d="M120,243 L120,270 L132,256 Z" fill="#8FA6BC"/>
+      <path d="M24,205 L48,199 L48,231 L24,237 L33,221 Z" fill="url(#ribbon-aaa)"/>
+      <path d="M216,205 L192,199 L192,231 L216,237 L207,221 Z" fill="url(#ribbon-aaa)"/>
+      <path d="M48,198 Q120,192 192,198 L192,232 Q120,238 48,232 Z" fill="url(#ribbon-aaa)"/>
+      <path d="M48,198 Q120,192 192,198 L192,232 Q120,238 48,232 Z" fill="none" stroke="#8FA6BC" stroke-opacity="0.65" stroke-width="1.3"/>
+      <text x="120" y="224" text-anchor="middle" font-family="Saira, sans-serif" font-weight="800" font-size="30" letter-spacing="3" fill="#DCE4EC">AAA</text>
+    </symbol>
+
+    <symbol id="badge-aca" viewBox="0 0 240 312">
+      <path d="M30,46 Q30,33 43,33 L197,33 Q210,33 210,46 L210,150 C210,205 168,250 120,298 C72,250 30,205 30,150 Z" fill="url(#frame-aca)"/>
+      <path d="M30,46 Q30,33 43,33 L197,33 Q210,33 210,46 L210,150 C210,205 168,250 120,298 C72,250 30,205 30,150 Z" fill="none" stroke="#ffffff" stroke-opacity="0.32" stroke-width="1.2"/>
+      <path d="M44,55 Q44,45 54,45 L186,45 Q196,45 196,55 L196,150 C196,192 163,230 120,278 C77,230 44,192 44,150 Z" fill="url(#field-aca)"/>
+      <ellipse cx="120" cy="150" rx="76" ry="90" fill="url(#glow-aca)"/>
+      <path d="M44,55 Q44,45 54,45 L186,45 Q196,45 196,55 L196,150 C196,192 163,230 120,278 C77,230 44,192 44,150 Z" fill="url(#circuit)"/>
+      <path d="M44,55 Q44,45 54,45 L186,45 Q196,45 196,55 L196,150 C196,192 163,230 120,278 C77,230 44,192 44,150 Z" fill="none" stroke="#1E90E8" stroke-opacity="0.55" stroke-width="1.4"/>
+      <path d="M52,64 Q52,55 60,55 L180,55 Q188,55 188,64 L188,150 C188,188 158,223 120,266 C82,223 52,188 52,150 Z" fill="none" stroke="#ffffff" stroke-opacity="0.12" stroke-width="1"/>
+      <rect x="87" y="60" width="12" height="5" rx="2.5" fill="#1E90E8"/>
+      <rect x="105" y="60" width="12" height="5" rx="2.5" fill="#1E90E8"/>
+      <rect x="123" y="60" width="12" height="5" rx="2.5" fill="#9fb0c0" opacity="0.22"/>
+      <rect x="141" y="60" width="12" height="5" rx="2.5" fill="#9fb0c0" opacity="0.22"/>
+      <path d="M120,84 L120,176 L76,176 Z" fill="url(#steelDark)"/>
+      <path d="M120,84 L164,176 L120,176 Z" fill="url(#steelLight)"/>
+      <path d="M120,84 L120,176" stroke="#0c2036" stroke-width="1.4" stroke-opacity="0.5"/>
+      <path d="M120,84 L76,176" stroke="#43B4FF" stroke-width="3" stroke-linecap="round"/>
+      <path d="M95,148 L145,148 L149,158 L99,158 Z" fill="#1E90E8"/>
+      <path d="M120,243 L120,270 L108,256 Z" fill="url(#steelDark)"/>
+      <path d="M120,243 L120,270 L132,256 Z" fill="#43B4FF"/>
+      <path d="M24,205 L48,199 L48,231 L24,237 L33,221 Z" fill="url(#ribbon-aca)"/>
+      <path d="M216,205 L192,199 L192,231 L216,237 L207,221 Z" fill="url(#ribbon-aca)"/>
+      <path d="M48,198 Q120,192 192,198 L192,232 Q120,238 48,232 Z" fill="url(#ribbon-aca)"/>
+      <path d="M48,198 Q120,192 192,198 L192,232 Q120,238 48,232 Z" fill="none" stroke="#43B4FF" stroke-opacity="0.7" stroke-width="1.3"/>
+      <text x="120" y="224" text-anchor="middle" font-family="Saira, sans-serif" font-weight="800" font-size="30" letter-spacing="3" fill="#EAF4FF">ACA</text>
+    </symbol>
+
+    <symbol id="badge-ada" viewBox="0 0 240 312">
+      <path d="M30,46 Q30,33 43,33 L197,33 Q210,33 210,46 L210,150 C210,205 168,250 120,298 C72,250 30,205 30,150 Z" fill="url(#frame-ada)"/>
+      <path d="M30,46 Q30,33 43,33 L197,33 Q210,33 210,46 L210,150 C210,205 168,250 120,298 C72,250 30,205 30,150 Z" fill="none" stroke="#ffffff" stroke-opacity="0.34" stroke-width="1.2"/>
+      <path d="M44,55 Q44,45 54,45 L186,45 Q196,45 196,55 L196,150 C196,192 163,230 120,278 C77,230 44,192 44,150 Z" fill="url(#field-ada)"/>
+      <ellipse cx="120" cy="150" rx="76" ry="90" fill="url(#glow-ada)"/>
+      <path d="M44,55 Q44,45 54,45 L186,45 Q196,45 196,55 L196,150 C196,192 163,230 120,278 C77,230 44,192 44,150 Z" fill="url(#circuit)"/>
+      <path d="M44,55 Q44,45 54,45 L186,45 Q196,45 196,55 L196,150 C196,192 163,230 120,278 C77,230 44,192 44,150 Z" fill="none" stroke="#34A8FF" stroke-opacity="0.58" stroke-width="1.4"/>
+      <path d="M52,64 Q52,55 60,55 L180,55 Q188,55 188,64 L188,150 C188,188 158,223 120,266 C82,223 52,188 52,150 Z" fill="none" stroke="#ffffff" stroke-opacity="0.13" stroke-width="1"/>
+      <rect x="87" y="60" width="12" height="5" rx="2.5" fill="#34A8FF"/>
+      <rect x="105" y="60" width="12" height="5" rx="2.5" fill="#34A8FF"/>
+      <rect x="123" y="60" width="12" height="5" rx="2.5" fill="#34A8FF"/>
+      <rect x="141" y="60" width="12" height="5" rx="2.5" fill="#9fb0c0" opacity="0.22"/>
+      <path d="M120,84 L120,176 L76,176 Z" fill="url(#steelDark)"/>
+      <path d="M120,84 L164,176 L120,176 Z" fill="url(#steelLight)"/>
+      <path d="M120,84 L120,176" stroke="#08203f" stroke-width="1.4" stroke-opacity="0.5"/>
+      <path d="M120,84 L76,176" stroke="#5CC2FF" stroke-width="3" stroke-linecap="round"/>
+      <path d="M95,148 L145,148 L149,158 L99,158 Z" fill="#34A8FF"/>
+      <path d="M120,243 L120,270 L108,256 Z" fill="url(#steelDark)"/>
+      <path d="M120,243 L120,270 L132,256 Z" fill="#5CC2FF"/>
+      <path d="M24,205 L48,199 L48,231 L24,237 L33,221 Z" fill="url(#ribbon-ada)"/>
+      <path d="M216,205 L192,199 L192,231 L216,237 L207,221 Z" fill="url(#ribbon-ada)"/>
+      <path d="M48,198 Q120,192 192,198 L192,232 Q120,238 48,232 Z" fill="url(#ribbon-ada)"/>
+      <path d="M48,198 Q120,192 192,198 L192,232 Q120,238 48,232 Z" fill="none" stroke="#5CC2FF" stroke-opacity="0.72" stroke-width="1.3"/>
+      <text x="120" y="224" text-anchor="middle" font-family="Saira, sans-serif" font-weight="800" font-size="30" letter-spacing="3" fill="#EAF4FF">ADA</text>
+    </symbol>
+
+    <symbol id="badge-aga" viewBox="0 0 240 312">
+      <path d="M30,46 Q30,33 43,33 L197,33 Q210,33 210,46 L210,150 C210,205 168,250 120,298 C72,250 30,205 30,150 Z" fill="url(#frame-aga)"/>
+      <path d="M30,46 Q30,33 43,33 L197,33 Q210,33 210,46 L210,150 C210,205 168,250 120,298 C72,250 30,205 30,150 Z" fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="1.3"/>
+      <path d="M44,55 Q44,45 54,45 L186,45 Q196,45 196,55 L196,150 C196,192 163,230 120,278 C77,230 44,192 44,150 Z" fill="url(#field-aga)"/>
+      <ellipse cx="120" cy="150" rx="78" ry="92" fill="url(#glow-aga)"/>
+      <path d="M44,55 Q44,45 54,45 L186,45 Q196,45 196,55 L196,150 C196,192 163,230 120,278 C77,230 44,192 44,150 Z" fill="url(#circuit)"/>
+      <path d="M44,55 Q44,45 54,45 L186,45 Q196,45 196,55 L196,150 C196,192 163,230 120,278 C77,230 44,192 44,150 Z" fill="none" stroke="#56BEFF" stroke-opacity="0.6" stroke-width="1.5"/>
+      <path d="M52,64 Q52,55 60,55 L180,55 Q188,55 188,64 L188,150 C188,188 158,223 120,266 C82,223 52,188 52,150 Z" fill="none" stroke="#56BEFF" stroke-opacity="0.4" stroke-width="1"/>
+      <path d="M52,62 Q52,53 60,53 L180,53 Q188,53 188,62 L188,148 C188,186 158,221 120,264 C82,221 52,186 52,148 Z" fill="none" stroke="#ffffff" stroke-opacity="0.16" stroke-width="1"/>
+      <rect x="87" y="60" width="12" height="5" rx="2.5" fill="#56BEFF"/>
+      <rect x="105" y="60" width="12" height="5" rx="2.5" fill="#56BEFF"/>
+      <rect x="123" y="60" width="12" height="5" rx="2.5" fill="#56BEFF"/>
+      <rect x="141" y="60" width="12" height="5" rx="2.5" fill="#56BEFF"/>
+      <path d="M120,84 L120,176 L76,176 Z" fill="url(#steelDark)"/>
+      <path d="M120,84 L164,176 L120,176 Z" fill="url(#steelLight)"/>
+      <path d="M120,84 L120,176" stroke="#04101f" stroke-width="1.4" stroke-opacity="0.5"/>
+      <path d="M120,84 L76,176" stroke="#7FD2FF" stroke-width="3.2" stroke-linecap="round"/>
+      <path d="M95,148 L145,148 L149,158 L99,158 Z" fill="#56BEFF"/>
+      <path d="M120,243 L120,270 L108,256 Z" fill="url(#steelDark)"/>
+      <path d="M120,243 L120,270 L132,256 Z" fill="#7FD2FF"/>
+      <path d="M24,205 L48,199 L48,231 L24,237 L33,221 Z" fill="url(#ribbon-aga)"/>
+      <path d="M216,205 L192,199 L192,231 L216,237 L207,221 Z" fill="url(#ribbon-aga)"/>
+      <path d="M48,198 Q120,192 192,198 L192,232 Q120,238 48,232 Z" fill="url(#ribbon-aga)"/>
+      <path d="M48,198 Q120,192 192,198 L192,232 Q120,238 48,232 Z" fill="none" stroke="#7FD2FF" stroke-opacity="0.8" stroke-width="1.4"/>
+      <text x="120" y="224" text-anchor="middle" font-family="Saira, sans-serif" font-weight="800" font-size="30" letter-spacing="3" fill="#FFFFFF">AGA</text>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="page">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo-plate">
+      <img src="ace-logo.png" alt="Advanced Consulting Experts">
+    </div>
+    <div class="header-meta">
+      <div class="eyebrow">THE ACE BENCH &middot; INTERNAL INSIGNIA SYSTEM</div>
+      <div class="sub">Enterprise Playbook v1.0 &middot; Section 7</div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1>The Architect Ladder</h1>
+    <p>Four earned tiers on the ACE Bench, each a hard gate. Every insignia carries the faceted ACE mark, its tier code, and a finish that advances with the craft &mdash; gunmetal at intake to platinum at the senior tier.</p>
+  </section>
+
+  <!-- Badge Wall -->
+  <section>
+    <div class="badge-grid">
+      <!-- AAA -->
+      <div class="badge-cell">
+        <div class="badge-wrap badge-wrap--sm">
+          <div class="badge-glow" style="background:radial-gradient(52% 46% at 50% 40%,rgba(159,180,200,0.20),transparent 70%)"></div>
+          <svg class="badge-svg" viewBox="0 0 240 312"><use href="#badge-aaa"/></svg>
+        </div>
+      </div>
+      <!-- ACA -->
+      <div class="badge-cell">
+        <div class="badge-wrap badge-wrap--sm">
+          <div class="badge-glow" style="background:radial-gradient(52% 46% at 50% 40%,rgba(30,144,232,0.30),transparent 70%);filter:blur(7px)"></div>
+          <svg class="badge-svg" viewBox="0 0 240 312"><use href="#badge-aca"/></svg>
+        </div>
+      </div>
+      <!-- ADA -->
+      <div class="badge-cell">
+        <div class="badge-wrap badge-wrap--sm">
+          <div class="badge-glow" style="background:radial-gradient(52% 46% at 50% 40%,rgba(52,168,255,0.34),transparent 70%);filter:blur(7px)"></div>
+          <svg class="badge-svg" viewBox="0 0 240 312"><use href="#badge-ada"/></svg>
+        </div>
+      </div>
+      <!-- AGA -->
+      <div class="badge-cell">
+        <div class="badge-wrap badge-wrap--lg">
+          <div class="badge-glow" style="background:radial-gradient(54% 48% at 50% 40%,rgba(86,190,255,0.42),transparent 70%)"></div>
+          <svg class="badge-svg" viewBox="0 0 240 312"><use href="#badge-aga"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progression Rail -->
+    <div class="rail-wrap">
+      <div class="rail-line"></div>
+      <div class="rail-arrow" style="left:31%;color:#46618a">&#9656;</div>
+      <div class="rail-arrow" style="left:56%;color:#4d77ad">&#9656;</div>
+      <div class="rail-arrow" style="left:81%;color:#5d92d4">&#9656;</div>
+      <div class="rail-nodes">
+        <div>
+          <div class="rail-node" style="color:#0b1722;background:radial-gradient(60% 60% at 40% 30%,#b9c8d6,#8095a8);box-shadow:0 4px 12px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.5)">1</div>
+        </div>
+        <div>
+          <div class="rail-node" style="color:#fff;background:radial-gradient(60% 60% at 40% 30%,#56b0f5,#1370c4);box-shadow:0 4px 12px rgba(20,90,160,0.5),inset 0 1px 0 rgba(255,255,255,0.45)">2</div>
+        </div>
+        <div>
+          <div class="rail-node" style="color:#fff;background:radial-gradient(60% 60% at 40% 30%,#65bcff,#1f7fcf);box-shadow:0 4px 12px rgba(30,120,190,0.55),inset 0 1px 0 rgba(255,255,255,0.45)">3</div>
+        </div>
+        <div>
+          <div class="rail-node" style="width:40px;height:40px;color:#fff;background:radial-gradient(60% 60% at 40% 30%,#8fd6ff,#2b8fdd);box-shadow:0 5px 16px rgba(86,190,255,0.6),inset 0 1px 0 rgba(255,255,255,0.55)">4</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meta Cards -->
+    <div class="meta-grid">
+      <div class="meta-card">
+        <div class="finish-label" style="color:#8FA6BC">GUNMETAL &middot; INTAKE</div>
+        <h3>ACE Architect Associate</h3>
+        <p>In the pipeline &mdash; building skills in ACAP under supervision.</p>
+        <div class="gate">
+          <div class="gate-label">ENTRY GATE</div>
+          <div class="gate-text">Accepted into a cohort; Code&nbsp;of&nbsp;Conduct signed.</div>
+        </div>
+      </div>
+      <div class="meta-card">
+        <div class="finish-label" style="color:#43B4FF">BRAND SILVER &middot; CERTIFIED</div>
+        <h3>ACE Certified Architect</h3>
+        <p>Credentialed and deployable on customer engagements.</p>
+        <div class="gate">
+          <div class="gate-label">ENTRY GATE</div>
+          <div class="gate-text">900/1000 ACE practice exam, then passed&nbsp;CCA&#8209;F.</div>
+        </div>
+      </div>
+      <div class="meta-card">
+        <div class="finish-label" style="color:#34A8FF">COBALT CHROME &middot; DELIVERY</div>
+        <h3>ACE Delivery Architect</h3>
+        <p>Runs engagements &mdash; owns delivery and sign&#8209;off discipline.</p>
+        <div class="gate">
+          <div class="gate-label">ENTRY GATE</div>
+          <div class="gate-text">Led accepted delivery under supervision; promotion.</div>
+        </div>
+      </div>
+      <div class="meta-card" style="border-top-color:rgba(120,170,210,0.25)">
+        <div class="finish-label" style="color:#7FD2FF">PLATINUM &middot; SENIOR CRAFT</div>
+        <h3 style="color:#f4f9ff">ACE Governance Architect</h3>
+        <p style="color:#9fb6cc">Senior craft tier &mdash; owns GIA, mentors the bench.</p>
+        <div class="gate" style="border-top-color:rgba(120,170,210,0.25)">
+          <div class="gate-label" style="color:#6a94c0">ENTRY GATE</div>
+          <div class="gate-text" style="color:#b7cadd">Governance design ownership; GIA certification.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Versatility Panel -->
+  <section class="versatility">
+    <div class="versatility-header">
+      <div>
+        <div class="built-label">BUILT TO SCALE</div>
+        <h2>From certificate seal to dashboard chip</h2>
+      </div>
+      <div class="sub-copy">The same insignia reads clean on a printed medallion, an email signature, or a 24px row in the Bench Status Tracker.</div>
+    </div>
+
+    <!-- Light rack -->
+    <div class="light-rack">
+      <div class="rack-card">
+        <svg viewBox="0 0 240 312" style="width:88px;height:auto;filter:drop-shadow(0 6px 10px rgba(20,40,70,0.18))"><use href="#badge-aaa"/></svg>
+        <div class="tier-code">AAA</div>
+        <div class="tier-name">Architect Associate</div>
+      </div>
+      <div class="rack-card">
+        <svg viewBox="0 0 240 312" style="width:88px;height:auto;filter:drop-shadow(0 6px 10px rgba(20,40,70,0.18))"><use href="#badge-aca"/></svg>
+        <div class="tier-code">ACA</div>
+        <div class="tier-name">Certified Architect</div>
+      </div>
+      <div class="rack-card">
+        <svg viewBox="0 0 240 312" style="width:88px;height:auto;filter:drop-shadow(0 6px 10px rgba(20,40,70,0.18))"><use href="#badge-ada"/></svg>
+        <div class="tier-code">ADA</div>
+        <div class="tier-name">Delivery Architect</div>
+      </div>
+      <div class="rack-card">
+        <svg viewBox="0 0 240 312" style="width:88px;height:auto;filter:drop-shadow(0 6px 10px rgba(20,40,70,0.18))"><use href="#badge-aga"/></svg>
+        <div class="tier-code">AGA</div>
+        <div class="tier-name">Governance Architect</div>
+      </div>
+    </div>
+
+    <div class="utility-row">
+      <!-- Dashboard chips -->
+      <div>
+        <div class="section-label">BENCH STATUS TRACKER &middot; ROW CHIPS</div>
+        <div class="chip-list">
+          <div class="chip">
+            <svg viewBox="0 0 240 312" style="width:26px;height:auto;flex:none"><use href="#badge-aaa"/></svg>
+            <div class="chip-code">AAA</div>
+            <div class="chip-name">ACE Architect Associate</div>
+            <div class="tier-tag">TIER 1</div>
+          </div>
+          <div class="chip">
+            <svg viewBox="0 0 240 312" style="width:26px;height:auto;flex:none"><use href="#badge-aca"/></svg>
+            <div class="chip-code">ACA</div>
+            <div class="chip-name">ACE Certified Architect</div>
+            <div class="tier-tag">TIER 2</div>
+          </div>
+          <div class="chip">
+            <svg viewBox="0 0 240 312" style="width:26px;height:auto;flex:none"><use href="#badge-ada"/></svg>
+            <div class="chip-code">ADA</div>
+            <div class="chip-name">ACE Delivery Architect</div>
+            <div class="tier-tag">TIER 3</div>
+          </div>
+          <div class="chip chip--aga">
+            <svg viewBox="0 0 240 312" style="width:26px;height:auto;flex:none"><use href="#badge-aga"/></svg>
+            <div class="chip-code">AGA</div>
+            <div class="chip-name">ACE Governance Architect</div>
+            <div class="tier-tag">TIER 4</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Size ramp -->
+      <div>
+        <div class="section-label">LEGIBILITY RAMP &middot; ACA</div>
+        <div class="size-ramp-wrap">
+          <div class="size-ramp">
+            <div class="size-ramp-item">
+              <svg viewBox="0 0 240 312" style="width:84px;height:auto"><use href="#badge-aca"/></svg>
+              <span>84px</span>
+            </div>
+            <div class="size-ramp-item">
+              <svg viewBox="0 0 240 312" style="width:52px;height:auto"><use href="#badge-aca"/></svg>
+              <span>52px</span>
+            </div>
+            <div class="size-ramp-item">
+              <svg viewBox="0 0 240 312" style="width:32px;height:auto"><use href="#badge-aca"/></svg>
+              <span>32px</span>
+            </div>
+            <div class="size-ramp-item">
+              <svg viewBox="0 0 240 312" style="width:22px;height:auto"><use href="#badge-aca"/></svg>
+              <span>22px</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="page-footer">
+    <div class="footer-note">Tier codes are internal-use only &mdash; full tier names appear in all customer-, partner-, university-, and federal-facing materials.</div>
+    <div class="footer-conf">ACE INTERNAL &amp; PARTNER CONFIDENTIAL</div>
+  </footer>
+
+</div>
+</body>
+</html>
