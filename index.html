@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gina's Builds — OGO Staff Portal & Tax Academy</title>
+<style>
+  :root{
+    --ink:#0d3b45; --teal:#005A69; --gold:#c99a2e; --bg:#f4f8f9; --card:#ffffff;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:linear-gradient(160deg,#eef5f6 0%,#f9fbfb 60%,#f2f0e9 100%);
+    color:var(--ink); min-height:100vh;
+    display:flex; flex-direction:column; align-items:center;
+    padding:48px 20px;
+  }
+  .hero{text-align:center; max-width:640px; margin-bottom:40px;}
+  .hero .badge{
+    display:inline-block; background:var(--teal); color:#fff;
+    font-size:13px; letter-spacing:.08em; text-transform:uppercase;
+    padding:6px 14px; border-radius:999px; margin-bottom:18px;
+  }
+  h1{font-size:clamp(28px,5vw,42px); letter-spacing:-.02em; line-height:1.15;}
+  .hero p{margin-top:14px; font-size:17px; color:#3e5c63; line-height:1.55;}
+  .cards{
+    display:grid; gap:24px; width:100%; max-width:860px;
+    grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  }
+  .card{
+    background:var(--card); border-radius:18px; padding:30px;
+    box-shadow:0 10px 30px rgba(13,59,69,.08);
+    display:flex; flex-direction:column; gap:12px;
+    border-top:5px solid var(--teal);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .card:hover{transform:translateY(-4px); box-shadow:0 16px 38px rgba(13,59,69,.14);}
+  .card.gold{border-top-color:var(--gold);}
+  .card .emoji{font-size:34px;}
+  .card h2{font-size:22px; letter-spacing:-.01em;}
+  .card p{color:#41626a; line-height:1.55; font-size:15px; flex:1;}
+  .card ul{list-style:none; font-size:14px; color:#41626a; line-height:1.9;}
+  .card ul li::before{content:"✓  "; color:var(--teal); font-weight:700;}
+  .card.gold ul li::before{color:var(--gold);}
+  .btn{
+    display:inline-block; text-align:center; text-decoration:none;
+    background:var(--teal); color:#fff; font-weight:600; font-size:15px;
+    padding:13px 22px; border-radius:12px; margin-top:6px;
+  }
+  .btn:hover{filter:brightness(1.12);}
+  .card.gold .btn{background:var(--gold);}
+  .note{
+    margin-top:36px; max-width:640px; text-align:center;
+    font-size:13.5px; color:#6b8288; line-height:1.6;
+  }
+  footer{margin-top:28px; font-size:13px; color:#8aa0a5;}
+</style>
+</head>
+<body>
+  <div class="hero">
+    <span class="badge">Built by Gina · OGO Financial Services</span>
+    <h1>Tools I built for a multi-office tax firm</h1>
+    <p>Two working web apps — a staff portal that runs day-to-day operations,
+       and a training academy that gets tax preparers season-ready.
+       Click either one to try it live.</p>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="emoji">🏢</div>
+      <h2>OGO Staff Portal</h2>
+      <p>An all-in-one hub for a three-office team.</p>
+      <ul>
+        <li>Dashboard, events &amp; announcements</li>
+        <li>Time clock with office geofencing</li>
+        <li>Staff directory, PTO &amp; requests</li>
+        <li>Client pipeline &amp; analytics</li>
+      </ul>
+      <a class="btn" href="ogo-staff-portal/">Open the Portal →</a>
+      <p style="flex:0;font-size:12.5px;color:#8aa0a5;">Demo data · Admin passcode: DEMO1234</p>
+    </div>
+
+    <div class="card gold">
+      <div class="emoji">🎓</div>
+      <h2>OGO Tax Academy</h2>
+      <p>Interactive training to get preparers AFSP-ready.</p>
+      <ul>
+        <li>Lesson tracks &amp; practice tests</li>
+        <li>Schedule C Decision Lab</li>
+        <li>AFTR comprehension practice</li>
+        <li>Completion certificates</li>
+      </ul>
+      <a class="btn" href="ogo-tax-academy/">Open the Academy →</a>
+      <p style="flex:0;font-size:12.5px;color:#8aa0a5;">No sign-up needed — just start learning</p>
+    </div>
+  </div>
+
+  <p class="note">The Staff Portal shown here is a demo version: every person and
+     client in it is fictional sample data.</p>
+
+  <footer>Made with ❤️ in Florida · <a href="https://github.com/SassyGstar/desktop-tutorial" style="color:inherit;">View the code on GitHub</a></footer>
+</body>
+</html>
