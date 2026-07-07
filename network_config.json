@@ -20,9 +20,15 @@
       "name": "Party_C"
     }
   ],
+  "gemini": {
+    "model": "gemini-2.0-flash",
+    "api_key_env": "GEMINI_API_KEY"
+  },
   "security_settings": {
     "protocol": "semi-honest",
     "use_tls": true,
-    "ca_cert_path": "./certs/ca.pem"
+    "ca_cert_path": "./certs/ca.pem",
+    "cert_path": "./certs/party_0.pem",
+    "key_path": "./certs/party_0.key"
   }
 }
