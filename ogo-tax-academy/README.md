@@ -1,6 +1,6 @@
 # OGO Tax Academy
 
-🌐 **[Try it live](https://sassygstar.github.io/desktop-tutorial/ogo-tax-academy/)**
+🌐 **[Try it live](https://sassygstar.github.io/sassyg-builds/ogo-tax-academy/)**
 
 A self-contained training web app for tax preparers getting AFSP-ready
 (Annual Filing Season Program), including:
