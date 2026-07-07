@@ -12,6 +12,8 @@ This is my first GitHub repository! I'm just getting started, and I'm using it t
 
 ## My builds
 
+🌐 **Try them live: [sassygstar.github.io/desktop-tutorial](https://sassygstar.github.io/desktop-tutorial/)**
+
 - **[OGO Staff Portal](ogo-staff-portal/)** — a staff portal web app with a dashboard, time clock, directory, PTO tracking, and client pipeline. This is a demo version with fictional sample data.
 - **[OGO Tax Academy](ogo-tax-academy/)** — a training app for tax preparers with lessons, practice tests, and completion certificates.
 
