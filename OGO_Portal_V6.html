@@ -582,23 +582,27 @@ function getPTOInfo(emp){
 }
 function getPTOUsed(name){
   var yr=String(new Date().getFullYear());
-  return (S.requests||[]).filter(function(r){return r.requester===name&&r.status==='Approved'&&(r.type==='PTO'||r.type==='Vacation')&&r.dateFrom&&r.dateFrom.slice(0,4)===yr;}).reduce(function(t,r){var f=new Date(r.dateFrom+'T00:00:00'),to=r.dateTo?new Date(r.dateTo+'T00:00:00'):f;return t+(Math.max(1,Math.round((to-f)/86400000)+1)*8);},0);
+  return (S.requests||[]).filter(function(r){return r.requester===name&&r.status==='Approved'&&(r.type==='PTO'||r.type==='Vacation')&&((r.dateFrom&&r.dateFrom.slice(0,4)===yr)||(r.ptoYear===yr));}).reduce(function(t,r){
+    if(r.ptoHours!=null&&r.ptoHours!==''){return t+Number(r.ptoHours);}
+    var f=new Date(r.dateFrom+'T00:00:00'),to=r.dateTo?new Date(r.dateTo+'T00:00:00'):f;
+    return t+(Math.max(1,Math.round((to-f)/86400000)+1)*8);
+  },0);
 }
 
 const GEO={Orlando:{lat:28.4842556,lng:-81.4575523,r:500},Clermont:{lat:28.5488526,lng:-81.7283544,r:500},'Winter Haven':{lat:28.0216089,lng:-81.7333756,r:500}};
 
 const EMPLOYEES=[
-  {id:1,name:'LeBrun Alexis',bday:'',phone:'(407) 924-8796',email:'lebrun@ogofin.com',pos:'CEO',office:'Orlando',status:'Active'},
-  {id:2,name:'Vestin Paul',bday:'1981-12-30',phone:'(863) 350-6177',email:'jeanvpaul@gmail.com',pos:'Branch Manager',office:'Winter Haven',status:'Active'},
-  {id:3,name:'Brandy Alexis',bday:'1993-04-18',phone:'(407) 247-8021',email:'',pos:'Marketing',office:'Orlando',status:'Active'},
-  {id:4,name:'Berline Jolimer',bday:'1980-04-11',phone:'(407) 272-1097',email:'berlined@yahoo.com',pos:'Human Resources',office:'Orlando',status:'Active'},
-  {id:5,name:'Gina Altidor',bday:'1981-04-30',phone:'(407) 545-1914',email:'gina@ogofin.com',pos:'Tax Resolution Director',office:'Orlando',status:'Active'},
-  {id:6,name:'Frances Torres',bday:'2003-09-02',phone:'(787) 944-5063',email:'frances@ogofin.com',pos:'Team Lead',office:'Clermont',status:'Active'},
-  {id:7,name:'Guiovan Galarza',bday:'2000-01-03',phone:'(407) 575-6245',email:'guiovang@gmail.com',pos:'Administrative Assistant',office:'Orlando',status:'Active'},
-  {id:8,name:'Bianca Sanchez',bday:'1988-05-23',phone:'(786) 663-8780',email:'bianca_luna02@aol.com',pos:'Administrative Assistant',office:'Clermont',status:'Active'},
-  {id:9,name:'Clariluz Graham',bday:'1990-10-19',phone:'(305) 479-8923',email:'clariluz@truetypeinc.com',pos:'Administrative Assistant',office:'Winter Haven',status:'Active'},
-  {id:10,name:'Giovanni LeBrun Alexis',bday:'2003-12-27',phone:'',email:'giovannilalexis17@gmail.com',pos:'Bookkeeping',office:'Orlando',status:'Active'},
-  {id:11,name:'Maria Nino',bday:'',phone:'+17863823196',email:'marialenb12@gmail.com',pos:'Marketing Specialist',office:'Clermont',status:'Active',hireDate:''}
+  {id:1,name:'LeBrun Alexis',bday:'1979-01-22',hireDate:'2017-02-17',phone:'(407) 924-8796',email:'lebrun@ogofin.com',pos:'CEO',office:'Orlando',status:'Active'},
+  {id:2,name:'Vestin Paul',bday:'1981-12-30',hireDate:'2025-07-01',phone:'(863) 350-6177',email:'jeanvpaul@gmail.com',pos:'Branch Manager',office:'Winter Haven',status:'Active'},
+  {id:3,name:'Brandy Alexis',bday:'1993-04-18',hireDate:'2025-06-02',phone:'(407) 247-8021',email:'brandy@ogofin.com',pos:'Head Marketing',office:'Orlando',status:'Active'},
+  {id:4,name:'Berline Jolimer',bday:'1980-04-11',hireDate:'2025-07-01',phone:'(407) 272-1097',email:'berlined@yahoo.com',pos:'Human Resources',office:'Orlando',status:'Active'},
+  {id:5,name:'Gina Altidor',bday:'1981-04-30',hireDate:'2018-01-01',phone:'(407) 545-1914',email:'gina@ogofin.com',pos:'Tax Resolution Director',office:'Orlando',status:'Active'},
+  {id:6,name:'Frances Torres',bday:'2003-09-02',hireDate:'2025-03-28',phone:'(787) 944-5063',email:'frances@ogofin.com',pos:'Team Lead',office:'Clermont',status:'Active'},
+  {id:7,name:'Guiovan Galarza',bday:'2000-01-03',hireDate:'2025-10-13',phone:'(407) 575-6245',email:'guiovang@gmail.com',pos:'Administrative Assistant',office:'Orlando',status:'Active'},
+  {id:8,name:'Bianca Sanchez',bday:'1988-05-23',hireDate:'2025-10-09',phone:'(786) 663-8780',email:'bianca_luna02@aol.com',pos:'Administrative Assistant',office:'Clermont',status:'Active'},
+  {id:9,name:'Clariluz Graham',bday:'1990-10-19',hireDate:'2025-11-19',phone:'(305) 479-8923',email:'clariluz@truetypeinc.com',pos:'Administrative Assistant',office:'Winter Haven',status:'Active'},
+  {id:10,name:'Giovanni LeBrun Alexis',bday:'2002-12-17',hireDate:'2024-12-02',phone:'(407) 341-1141',email:'giovannilalexis17@gmail.com',pos:'Bookkeeping',office:'Orlando',status:'Active'},
+  {id:11,name:'Maria Nino',bday:'2003-12-10',hireDate:'',phone:'(786) 382-3196',email:'marialenb12@gmail.com',pos:'Marketing Specialist',office:'Clermont',status:'Active'}
 ];
 
 function makeDefault(){
@@ -646,6 +650,7 @@ function makeDefault(){
     tc:{entries:{},active:{}},
     analytics:{monthlyReturns:[42,51,49,63,58,71],months:['Jan','Feb','Mar','Apr','May','Jun']},
     ptoOverrides:{},
+    rosterSync:'',
     removedSeeds:{events:[],employees:[]}
   };
 }
@@ -702,6 +707,21 @@ function fbMerge(remote){
     if(!saved){S.employees.push(JSON.parse(JSON.stringify(seed)));}
     else{if(!saved.email&&seed.email)saved.email=seed.email;if((!saved.pos||saved.pos==='Staff')&&seed.pos&&seed.pos!=='Staff')saved.pos=seed.pos;}
   });
+  /* one-time HR data correction: refresh bday/hireDate/phone from verified roster */
+  if(S.rosterSync!=='2026-07-07'){
+    EMPLOYEES.forEach(function(seed){
+      var saved=S.employees.find(function(e){return e.id===seed.id;});
+      if(saved){
+        if(seed.bday)saved.bday=seed.bday;
+        if(seed.hireDate!==undefined)saved.hireDate=seed.hireDate;
+        if(seed.phone)saved.phone=seed.phone;
+        if(seed.email)saved.email=seed.email;
+        if(seed.pos)saved.pos=seed.pos;
+        if(seed.office)saved.office=seed.office;
+      }
+    });
+    S.rosterSync='2026-07-07';
+  }
   /* ensure seed events present */
   makeDefault().events.forEach(function(se){if(rmV.indexOf(se.id)>-1)return;if(!S.events.find(function(e){return e.id===se.id;}))S.events.push(se);});
   S.events.sort(function(a,b){return new Date(a.date)-new Date(b.date);});
@@ -1102,10 +1122,10 @@ function saveOfficeNote(){
 }
 function delOfficeNote(office,id){if(!S.offices[office])return;S.offices[office].notes=(S.offices[office].notes||[]).filter(function(n){return n.id!==id;});fbSave();renderAll();}
 function saveRequest(){
-  const p={type:tv('m-type'),office:tv('m-office'),dateFrom:tv('m-from'),dateTo:tv('m-to'),notes:tv('m-notes'),requester:CU?CU.name:'Unknown',status:'Pending',reviewedBy:'',reviewedAt:'',reviewNote:''};
+  const p={type:tv('m-type'),office:tv('m-office'),dateFrom:tv('m-from'),dateTo:tv('m-to'),notes:tv('m-notes'),ptoHours:tv('m-ptohours'),ptoYear:String(new Date().getFullYear()),requester:CU?CU.name:'Unknown',status:'Pending',reviewedBy:'',reviewedAt:'',reviewNote:''};
   const eid=Number((document.getElementById('m-eid')||{}).value||0);
   const canManage=S.adminMode||(CU&&CU.role==='Manager');
-  if(eid){const r=S.requests.find(function(r){return r.id===eid;});if(r){Object.assign(r,{type:p.type,office:p.office,dateFrom:p.dateFrom,dateTo:p.dateTo,notes:p.notes});if(canManage&&tv('m-status'))r.status=tv('m-status');}}
+  if(eid){const r=S.requests.find(function(r){return r.id===eid;});if(r){Object.assign(r,{type:p.type,office:p.office,dateFrom:p.dateFrom,dateTo:p.dateTo,notes:p.notes,ptoHours:p.ptoHours});if(canManage&&tv('m-status'))r.status=tv('m-status');}}
   else{S.requests.push({id:S.nextId++,...p});addNotif('New '+p.type+' request from '+p.requester+'.',p.office);addLog(p.requester+' submitted a '+p.type+' request.',p.office,p.requester);}
   fbSave();closeModal();renderAll();toast('Saved.');
 }
@@ -1316,7 +1336,17 @@ function editOffice(key){const o=S.offices[key]||{};openModal({title:'Edit '+key
 function addEmployee(){openModal({title:'Add Employee',body:'<input type="hidden" id="m-eid" value="0"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Full Name</label><input class="field" id="m-name"></div><div><label class="lbl">Position</label><input class="field" id="m-pos"></div><div><label class="lbl">Office</label><select class="field" id="m-office">'+offOpts('Orlando',false)+'</select></div><div><label class="lbl">Status</label><select class="field" id="m-status">'+selOpts(['Active','Inactive'],'Active')+'</select></div><div><label class="lbl">Birthday</label><input class="field" id="m-bday" type="date"></div><div><label class="lbl">Hire Date</label><input class="field" id="m-hire" type="date"></div><div><label class="lbl">Email</label><input class="field" id="m-email"></div><div><label class="lbl">Phone</label><input class="field" id="m-phone"></div></div>',btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveEmployee()">Add Employee</button>'});}
 function editEmp(e){openModal({title:'Edit Employee',body:'<input type="hidden" id="m-eid" value="'+e.id+'"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Full Name</label><input class="field" id="m-name" value="'+esc(e.name||'')+'"></div><div><label class="lbl">Position</label><input class="field" id="m-pos" value="'+esc(e.pos||'')+'"></div><div><label class="lbl">Office</label><select class="field" id="m-office">'+offOpts(e.office,false)+'</select></div><div><label class="lbl">Status</label><select class="field" id="m-status">'+selOpts(['Active','Inactive'],e.status||'Active')+'</select></div><div><label class="lbl">Birthday</label><input class="field" id="m-bday" type="date" value="'+esc(e.bday||'')+'"></div><div><label class="lbl">Hire Date</label><input class="field" id="m-hire" type="date" value="'+esc(e.hireDate||'')+'"></div><div><label class="lbl">Email</label><input class="field" id="m-email" value="'+esc(e.email||'')+'"></div><div><label class="lbl">Phone</label><input class="field" id="m-phone" value="'+esc(e.phone||'')+'"></div></div>',btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveEmployee()">Save</button>'+(S.adminMode?'<button class="btn-danger" onclick="removeEmp('+e.id+');closeModal()">Remove</button>':'')});}
 function removeEmp(id){if(!confirm('Remove employee?'))return;if(!S.removedSeeds)S.removedSeeds={};if(!S.removedSeeds.employees)S.removedSeeds.employees=[];if(S.removedSeeds.employees.indexOf(id)<0)S.removedSeeds.employees.push(id);S.employees=S.employees.filter(function(e){return e.id!==id;});fbSave();renderAll();}
-function addRequest(){openModal({title:'New Request',body:'<input type="hidden" id="m-eid" value="0"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Request Type</label><select class="field" id="m-type">'+selOpts(['PTO','Vacation','IT Support','Supply Request','Schedule Change','Training','Other'],'PTO')+'</select></div><div><label class="lbl">Office</label><select class="field" id="m-office">'+offOpts(CU?CU.office:'Orlando',false)+'</select></div><div><label class="lbl">From Date</label><input class="field" id="m-from" type="date"></div><div><label class="lbl">To Date</label><input class="field" id="m-to" type="date"></div></div><label class="lbl">Notes / Details</label><textarea class="field" id="m-notes" rows="3" placeholder="Reason, details..."></textarea>',btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveRequest()">Submit Request</button>'});}
+function addRequest(){
+  var myEmp=CU?S.employees.find(function(e){return e.name===CU.name;}):null;
+  var ptoInfo=myEmp?getPTOInfo(myEmp):null;
+  var ptoUsed=CU?getPTOUsed(CU.name):0;
+  var ptoRem=ptoInfo?Math.max(0,ptoInfo.total-ptoUsed):0;
+  var balHtml=ptoInfo&&ptoInfo.status==='Active'?'<div style="background:#f7ecd0;border:1px solid var(--ln);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px"><strong style="color:var(--navy)">Your PTO Balance:</strong> <span style="color:var(--green);font-weight:800">'+ptoRem+'h</span> available of '+ptoInfo.total+'h <span id="pto-after" style="color:var(--mu)"></span></div>':ptoInfo&&ptoInfo.status==='Probation'?'<div style="background:#fbefdd;border:1px solid var(--ln);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--orange)">You are in your 90-day probation period and do not yet have PTO hours available.</div>':'';
+  openModal({title:'New Request',body:balHtml+'<input type="hidden" id="m-eid" value="0"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Request Type</label><select class="field" id="m-type" onchange="togglePTOHours('+ptoRem+')">'+selOpts(['PTO','Vacation','IT Support','Supply Request','Schedule Change','Training','Other'],'PTO')+'</select></div><div><label class="lbl">Office</label><select class="field" id="m-office">'+offOpts(CU?CU.office:'Orlando',false)+'</select></div><div><label class="lbl">From Date</label><input class="field" id="m-from" type="date"></div><div><label class="lbl">To Date</label><input class="field" id="m-to" type="date"></div></div><div id="pto-hours-row"><label class="lbl">PTO Hours Requested</label><input class="field" id="m-ptohours" type="number" min="0" step="0.5" placeholder="e.g. 8" oninput="updatePTOAfter('+ptoRem+')"><div style="font-size:10px;color:var(--mu);margin-top:3px">Number of PTO hours to use (8 hrs = 1 full day).</div></div><label class="lbl">Notes / Details</label><textarea class="field" id="m-notes" rows="3" placeholder="Reason, details..."></textarea>',btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveRequest()">Submit Request</button>'});
+  setTimeout(function(){togglePTOHours(ptoRem);},30);
+}
+function togglePTOHours(rem){var t=(document.getElementById('m-type')||{}).value;var row=document.getElementById('pto-hours-row');if(row)row.style.display=(t==='PTO'||t==='Vacation')?'block':'none';}
+function updatePTOAfter(rem){var hh=parseFloat((document.getElementById('m-ptohours')||{}).value)||0;var after=document.getElementById('pto-after');if(after){if(hh>0){var left=rem-hh;after.innerHTML=' &middot; After: <strong style="color:'+(left<0?'var(--red)':'var(--navy)')+'">'+left+'h'+(left<0?' (exceeds balance!)':'')+'</strong>';}else{after.innerHTML='';}}}
 function editReq(r){openModal({title:'Edit Request',body:'<input type="hidden" id="m-eid" value="'+r.id+'"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Request Type</label><select class="field" id="m-type">'+selOpts(['PTO','Vacation','IT Support','Supply Request','Schedule Change','Training','Other'],r.type||'PTO')+'</select></div><div><label class="lbl">Office</label><select class="field" id="m-office">'+offOpts(r.office,false)+'</select></div><div><label class="lbl">From Date</label><input class="field" id="m-from" type="date" value="'+esc(r.dateFrom||'')+'"></div><div><label class="lbl">To Date</label><input class="field" id="m-to" type="date" value="'+esc(r.dateTo||'')+'"></div></div><label class="lbl">Notes</label><textarea class="field" id="m-notes" rows="3">'+esc(r.notes||'')+'</textarea>',btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveRequest()">Save</button><button class="btn-danger" onclick="withdrawRequest('+r.id+');closeModal()">Withdraw</button>'});}
 function addClient(){openModal({title:'Add Client',body:'<input type="hidden" id="m-eid" value="0"><label class="lbl">Client / Business Name</label><input class="field" id="m-name"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Office</label><select class="field" id="m-office">'+offOpts('Orlando',false)+'</select></div><div><label class="lbl">Assigned To</label><input class="field" id="m-owner" value="'+esc(CU?CU.name:'')+'"></div><div><label class="lbl">Status</label><select class="field" id="m-cstatus">'+selOpts(['Active','Waiting Docs','On Hold','Closed'],'Active')+'</select></div><div><label class="lbl">Stage</label><select class="field" id="m-stage">'+selOpts(['In Progress','Review','Documents Requested','Filed','Complete','On Hold'],'In Progress')+'</select></div></div><label class="lbl">Notes</label><textarea class="field" id="m-notes" rows="3"></textarea>',btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveClient()">Add Client</button>'});}
 function editClient(c){openModal({title:'Edit Client',body:'<input type="hidden" id="m-eid" value="'+c.id+'"><label class="lbl">Client / Business Name</label><input class="field" id="m-name" value="'+esc(c.name||'')+'"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Office</label><select class="field" id="m-office">'+offOpts(c.office,false)+'</select></div><div><label class="lbl">Assigned To</label><input class="field" id="m-owner" value="'+esc(c.owner||'')+'"></div><div><label class="lbl">Status</label><select class="field" id="m-cstatus">'+selOpts(['Active','Waiting Docs','On Hold','Closed'],c.status||'Active')+'</select></div><div><label class="lbl">Stage</label><select class="field" id="m-stage">'+selOpts(['In Progress','Review','Documents Requested','Filed','Complete','On Hold'],c.stage||'In Progress')+'</select></div></div><label class="lbl">Notes</label><textarea class="field" id="m-notes" rows="3">'+esc(c.notes||'')+'</textarea>',btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveClient()">Save</button>'+(S.adminMode?'<button class="btn-danger" onclick="deleteClient('+c.id+');closeModal()">Delete</button>':'')});}
