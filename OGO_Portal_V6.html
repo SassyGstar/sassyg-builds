@@ -584,13 +584,29 @@ function getPTOInfo(emp){
   if(yrs<1)return{type:'Hourly',total:40,status:'Active',note:'40 hrs \u00b7 Earns 80 hrs at 1-year anniversary'};
   return{type:'Hourly',total:ov?ov.total:80,status:'Active',note:'80 hrs \u00b7 Resets Jan 1 each year'};
 }
-function getPTOUsed(name){
+function ptoDayHours(r){
+  if(!r.dateFrom)return 0;
+  var f=new Date(r.dateFrom+'T00:00:00');
+  if(isNaN(f.getTime()))return 0;
+  var to=r.dateTo?new Date(r.dateTo+'T00:00:00'):new Date(f);
+  if(isNaN(to.getTime())||to<f)to=new Date(f);
+  var n=0;
+  for(var d=new Date(f);d<=to;d.setDate(d.getDate()+1)){var w=d.getDay();if(w!==0&&w!==6)n++;}
+  return Math.max(n,1)*8;
+}
+function getPTOUsedDetail(name){
   var yr=String(new Date().getFullYear());
-  return (S.requests||[]).filter(function(r){return r.requester===name&&r.status==='Approved'&&(r.type==='PTO'||r.type==='Vacation')&&((r.dateFrom&&r.dateFrom.slice(0,4)===yr)||(r.ptoYear===yr));}).reduce(function(t,r){
-    if(r.ptoHours!=null&&r.ptoHours!==''){return t+Number(r.ptoHours);}
-    var f=new Date(r.dateFrom+'T00:00:00'),to=r.dateTo?new Date(r.dateTo+'T00:00:00'):f;
-    return t+(Math.max(1,Math.round((to-f)/86400000)+1)*8);
-  },0);
+  return (S.requests||[]).filter(function(r){
+    return r.requester===name&&r.status==='Approved'&&(r.type==='PTO'||r.type==='Vacation')&&
+      ((r.dateFrom&&r.dateFrom.slice(0,4)===yr)||(r.ptoYear===yr));
+  }).map(function(r){
+    var exact=(r.ptoHours!=null&&r.ptoHours!==''&&isFinite(Number(r.ptoHours)));
+    return{id:r.id,type:r.type,dateFrom:r.dateFrom||'',dateTo:r.dateTo||'',
+      hours:exact?Number(r.ptoHours):ptoDayHours(r),exact:exact};
+  });
+}
+function getPTOUsed(name){
+  return getPTOUsedDetail(name).reduce(function(t,d){return t+d.hours;},0);
 }
 
 const GEO={Orlando:{lat:28.4842556,lng:-81.4575523,r:500},Clermont:{lat:28.5488526,lng:-81.7283544,r:500},'Winter Haven':{lat:28.0216089,lng:-81.7333756,r:500}};
@@ -668,6 +684,7 @@ let CU=null,fbRef=null,fbLock=false;
 let geoLat=null,geoLng=null,geoChecked=false;
 let pinBuf='',pinMode='',pinUser='',pinNewVal='';
 let urgOpen=true,inboxOpen=true,sessionTimer=null;
+var reqPtoRem=0;
 
 /* ── HELPERS ── */
 function clone(o){return JSON.parse(JSON.stringify(o));}
@@ -1161,11 +1178,29 @@ function saveOfficeNote(){
 }
 function delOfficeNote(office,id){if(!S.offices[office])return;S.offices[office].notes=(S.offices[office].notes||[]).filter(function(n){return n.id!==id;});fbSave();renderAll();}
 function saveRequest(){
-  const p={type:tv('m-type'),office:tv('m-office'),dateFrom:tv('m-from'),dateTo:tv('m-to'),notes:tv('m-notes'),ptoHours:tv('m-ptohours'),ptoYear:String(new Date().getFullYear()),requester:CU?CU.name:'Unknown',status:'Pending',reviewedBy:'',reviewedAt:'',reviewNote:''};
+  const who=tv('m-requester')||(CU?CU.name:'Unknown');
+  const p={type:tv('m-type'),office:tv('m-office'),dateFrom:tv('m-from'),dateTo:tv('m-to'),notes:tv('m-notes'),ptoHours:tv('m-ptohours'),ptoYear:String(new Date().getFullYear()),requester:who,status:'Pending',reviewedBy:'',reviewedAt:'',reviewNote:''};
   const eid=Number((document.getElementById('m-eid')||{}).value||0);
   const canManage=S.adminMode||(CU&&CU.role==='Manager');
   if(eid){const r=S.requests.find(function(r){return r.id===eid;});if(r){Object.assign(r,{type:p.type,office:p.office,dateFrom:p.dateFrom,dateTo:p.dateTo,notes:p.notes,ptoHours:p.ptoHours});if(canManage&&tv('m-status'))r.status=tv('m-status');}}
-  else{S.requests.push({id:S.nextId++,...p});addNotif('New '+p.type+' request from '+p.requester+'.',p.office);addLog(p.requester+' submitted a '+p.type+' request.',p.office,p.requester);}
+  else{
+    const st=tv('m-status')||'Pending';
+    p.status=st;
+    if(st!=='Pending'){
+      p.reviewedBy=CU?CU.name:'Admin';
+      p.reviewedAt=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      p.reviewNote='Recorded by '+(CU?CU.name:'Admin');
+    }
+    S.requests.push({id:S.nextId++,...p});
+    const onBehalf=CU&&who!==CU.name;
+    if(onBehalf){
+      addLog(CU.name+' recorded a '+p.type+' request for '+who+' ('+p.status+').',p.office,CU.name);
+      addInbox(who,p.type+' '+(p.status==='Approved'?'approved and recorded':'request recorded')+' by '+CU.name+(p.dateFrom?' for '+p.dateFrom+(p.dateTo&&p.dateTo!==p.dateFrom?' to '+p.dateTo:''):'')+'.');
+    }else{
+      addNotif('New '+p.type+' request from '+who+'.',p.office);
+      addLog(who+' submitted a '+p.type+' request.',p.office,who);
+    }
+  }
   fbSave();closeModal();renderAll();toast('Saved.');
 }
 function deleteRequest(id){S.requests=S.requests.filter(function(r){return r.id!==id;});fbSave();renderAll();}
@@ -1376,16 +1411,59 @@ function addEmployee(){openModal({title:'Add Employee',body:'<input type="hidden
 function editEmp(e){openModal({title:'Edit Employee',body:'<input type="hidden" id="m-eid" value="'+e.id+'"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Full Name</label><input class="field" id="m-name" value="'+esc(e.name||'')+'"></div><div><label class="lbl">Position</label><input class="field" id="m-pos" value="'+esc(e.pos||'')+'"></div><div><label class="lbl">Office</label><select class="field" id="m-office">'+offOpts(e.office,false)+'</select></div><div><label class="lbl">Status</label><select class="field" id="m-status">'+selOpts(['Active','Inactive'],e.status||'Active')+'</select></div><div><label class="lbl">Birthday</label><input class="field" id="m-bday" type="date" value="'+esc(e.bday||'')+'"></div><div><label class="lbl">Hire Date</label><input class="field" id="m-hire" type="date" value="'+esc(e.hireDate||'')+'"></div><div><label class="lbl">Email</label><input class="field" id="m-email" value="'+esc(e.email||'')+'"></div><div><label class="lbl">Phone</label><input class="field" id="m-phone" value="'+esc(e.phone||'')+'"></div></div>',btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveEmployee()">Save</button>'+(S.adminMode?'<button class="btn-danger" onclick="removeEmp('+e.id+');closeModal()">Remove</button>':'')});}
 function removeEmp(id){if(!confirm('Remove employee?'))return;if(!S.removedSeeds)S.removedSeeds={};if(!S.removedSeeds.employees)S.removedSeeds.employees=[];if(S.removedSeeds.employees.indexOf(id)<0)S.removedSeeds.employees.push(id);S.employees=S.employees.filter(function(e){return e.id!==id;});fbSave();renderAll();}
 function addRequest(){
-  var myEmp=CU?S.employees.find(function(e){return e.name===CU.name;}):null;
-  var ptoInfo=myEmp?getPTOInfo(myEmp):null;
-  var ptoUsed=CU?getPTOUsed(CU.name):0;
-  var ptoRem=ptoInfo?Math.max(0,ptoInfo.total-ptoUsed):0;
-  var balHtml=ptoInfo&&ptoInfo.status==='Active'?'<div style="background:var(--glt);border:1px solid var(--ln);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px"><strong style="color:var(--navy)">Your PTO Balance:</strong> <span style="color:var(--green);font-weight:800">'+ptoRem+'h</span> available of '+ptoInfo.total+'h <span id="pto-after" style="color:var(--mu)"></span></div>':ptoInfo&&ptoInfo.status==='Probation'?'<div style="background:#fbefdd;border:1px solid var(--ln);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--orange)">You are in your 90-day probation period and do not yet have PTO hours available.</div>':'';
-  openModal({title:'New Request',body:balHtml+'<input type="hidden" id="m-eid" value="0"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Request Type</label><select class="field" id="m-type" onchange="togglePTOHours('+ptoRem+')">'+selOpts(['PTO','Vacation','IT Support','Supply Request','Schedule Change','Training','Other'],'PTO')+'</select></div><div><label class="lbl">Office</label><select class="field" id="m-office">'+offOpts(CU?CU.office:'Orlando',false)+'</select></div><div><label class="lbl">From Date</label><input class="field" id="m-from" type="date"></div><div><label class="lbl">To Date</label><input class="field" id="m-to" type="date"></div></div><div id="pto-hours-row"><label class="lbl">PTO Hours Requested</label><input class="field" id="m-ptohours" type="number" min="0" step="0.5" placeholder="e.g. 8" oninput="updatePTOAfter('+ptoRem+')"><div style="font-size:10px;color:var(--mu);margin-top:3px">Number of PTO hours to use (8 hrs = 1 full day).</div></div><label class="lbl">Notes / Details</label><textarea class="field" id="m-notes" rows="3" placeholder="Reason, details..."></textarea>',btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveRequest()">Submit Request</button>'});
-  setTimeout(function(){togglePTOHours(ptoRem);},30);
+  var me=CU?CU.name:'';
+  var canFile=S.adminMode||(CU&&(CU.role==='Admin'||CU.role==='Manager'));
+  var empSel=canFile?'<div><label class="lbl">Employee</label><select class="field" id="m-requester" onchange="onReqEmpChange()">'+
+    S.employees.filter(function(e){return e.status!=='Inactive';}).map(function(e){return'<option'+(e.name===me?' selected':'')+'>'+esc(e.name)+'</option>';}).join('')+
+    '</select></div>':'';
+  var stSel=canFile?'<div><label class="lbl">Status</label><select class="field" id="m-status">'+selOpts(['Pending','Approved','Denied'],'Pending')+'</select></div>':'';
+  var bal='<div id="req-bal" style="background:var(--glt);border:1px solid var(--ln);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px">'+reqBalHtml(me)+'</div>';
+  openModal({title:'New Request',body:bal+'<input type="hidden" id="m-eid" value="0">'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+empSel+stSel+
+    '<div><label class="lbl">Request Type</label><select class="field" id="m-type" onchange="togglePTOHours()">'+selOpts(['PTO','Vacation','IT Support','Supply Request','Schedule Change','Training','Other'],'PTO')+'</select></div>'+
+    '<div><label class="lbl">Office</label><select class="field" id="m-office">'+offOpts(CU?CU.office:'Orlando',false)+'</select></div>'+
+    '<div><label class="lbl">From Date</label><input class="field" id="m-from" type="date"></div>'+
+    '<div><label class="lbl">To Date</label><input class="field" id="m-to" type="date"></div></div>'+
+    '<div id="pto-hours-row"><label class="lbl">PTO Hours Used</label><input class="field" id="m-ptohours" type="number" min="0" step="0.5" placeholder="e.g. 8" oninput="updatePTOAfter()"><div style="font-size:10px;color:var(--mu);margin-top:3px">8 hrs = 1 full day. Leave blank to count the weekdays in the date range.</div></div>'+
+    '<label class="lbl">Notes / Details</label><textarea class="field" id="m-notes" rows="3" placeholder="Reason, details..."></textarea>',
+    btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveRequest()">Save Request</button>'});
+  setTimeout(function(){togglePTOHours();},30);
 }
-function togglePTOHours(rem){var t=(document.getElementById('m-type')||{}).value;var row=document.getElementById('pto-hours-row');if(row)row.style.display=(t==='PTO'||t==='Vacation')?'block':'none';}
-function updatePTOAfter(rem){var hh=parseFloat((document.getElementById('m-ptohours')||{}).value)||0;var after=document.getElementById('pto-after');if(after){if(hh>0){var left=rem-hh;after.innerHTML=' &middot; After: <strong style="color:'+(left<0?'var(--red)':'var(--navy)')+'">'+left+'h'+(left<0?' (exceeds balance!)':'')+'</strong>';}else{after.innerHTML='';}}}
+function reqBalHtml(name){
+  var emp=S.employees.find(function(e){return e.name===name;});
+  var info=emp?getPTOInfo(emp):null;
+  var used=name?getPTOUsed(name):0;
+  var rem=info?Math.max(0,info.total-used):0;
+  reqPtoRem=rem;
+  if(info&&info.status==='Active')
+    return'<strong style="color:var(--navy)">'+esc(name)+' PTO Balance:</strong> <span style="color:var(--green);font-weight:800">'+rem+'h</span> available of '+info.total+'h &middot; used '+used+'h <span id="pto-after" style="color:var(--mu)"></span>';
+  if(info&&info.status==='Probation')
+    return'<span style="color:var(--orange)"><strong>'+esc(name)+'</strong> is still in the 90-day probation period and has no PTO hours available yet.</span><span id="pto-after"></span>';
+  if(info&&info.status==='No Hire Date')
+    return'<span style="color:var(--mu)"><strong>'+esc(name)+'</strong> has no hire date on file, so PTO cannot be calculated.</span><span id="pto-after"></span>';
+  return'<span style="color:var(--mu)">No PTO record for '+esc(name)+'.</span><span id="pto-after"></span>';
+}
+function onReqEmpChange(){
+  var sel=document.getElementById('m-requester');
+  var name=sel?sel.value:(CU?CU.name:'');
+  var box=document.getElementById('req-bal');
+  if(box)box.innerHTML=reqBalHtml(name);
+  togglePTOHours();updatePTOAfter();
+}
+function togglePTOHours(){
+  var t=(document.getElementById('m-type')||{}).value;
+  var row=document.getElementById('pto-hours-row');
+  if(row)row.style.display=(t==='PTO'||t==='Vacation')?'block':'none';
+}
+function updatePTOAfter(){
+  var hh=parseFloat((document.getElementById('m-ptohours')||{}).value)||0;
+  var after=document.getElementById('pto-after');
+  if(!after)return;
+  if(hh>0){
+    var left=reqPtoRem-hh;
+    after.innerHTML=' &middot; After: <strong style="color:'+(left<0?'var(--red)':'var(--navy)')+'">'+left+'h'+(left<0?' (exceeds balance!)':'')+'</strong>';
+  }else after.innerHTML='';
+}
 function editReq(r){openModal({title:'Edit Request',body:'<input type="hidden" id="m-eid" value="'+r.id+'"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Request Type</label><select class="field" id="m-type">'+selOpts(['PTO','Vacation','IT Support','Supply Request','Schedule Change','Training','Other'],r.type||'PTO')+'</select></div><div><label class="lbl">Office</label><select class="field" id="m-office">'+offOpts(r.office,false)+'</select></div><div><label class="lbl">From Date</label><input class="field" id="m-from" type="date" value="'+esc(r.dateFrom||'')+'"></div><div><label class="lbl">To Date</label><input class="field" id="m-to" type="date" value="'+esc(r.dateTo||'')+'"></div></div><label class="lbl">Notes</label><textarea class="field" id="m-notes" rows="3">'+esc(r.notes||'')+'</textarea>',btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveRequest()">Save</button><button class="btn-danger" onclick="withdrawRequest('+r.id+');closeModal()">Withdraw</button>'});}
 function addClient(){openModal({title:'Add Client',body:'<input type="hidden" id="m-eid" value="0"><label class="lbl">Client / Business Name</label><input class="field" id="m-name"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Office</label><select class="field" id="m-office">'+offOpts('Orlando',false)+'</select></div><div><label class="lbl">Assigned To</label><input class="field" id="m-owner" value="'+esc(CU?CU.name:'')+'"></div><div><label class="lbl">Status</label><select class="field" id="m-cstatus">'+selOpts(['Active','Waiting Docs','On Hold','Closed'],'Active')+'</select></div><div><label class="lbl">Stage</label><select class="field" id="m-stage">'+selOpts(['In Progress','Review','Documents Requested','Filed','Complete','On Hold'],'In Progress')+'</select></div></div><label class="lbl">Notes</label><textarea class="field" id="m-notes" rows="3"></textarea>',btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveClient()">Add Client</button>'});}
 function editClient(c){openModal({title:'Edit Client',body:'<input type="hidden" id="m-eid" value="'+c.id+'"><label class="lbl">Client / Business Name</label><input class="field" id="m-name" value="'+esc(c.name||'')+'"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Office</label><select class="field" id="m-office">'+offOpts(c.office,false)+'</select></div><div><label class="lbl">Assigned To</label><input class="field" id="m-owner" value="'+esc(c.owner||'')+'"></div><div><label class="lbl">Status</label><select class="field" id="m-cstatus">'+selOpts(['Active','Waiting Docs','On Hold','Closed'],c.status||'Active')+'</select></div><div><label class="lbl">Stage</label><select class="field" id="m-stage">'+selOpts(['In Progress','Review','Documents Requested','Filed','Complete','On Hold'],c.stage||'In Progress')+'</select></div></div><label class="lbl">Notes</label><textarea class="field" id="m-notes" rows="3">'+esc(c.notes||'')+'</textarea>',btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveClient()">Save</button>'+(S.adminMode?'<button class="btn-danger" onclick="deleteClient('+c.id+');closeModal()">Delete</button>':'')});}
@@ -1440,12 +1518,18 @@ function renderPTO(){
 }
 function adjustPTO(empId){
   var emp=S.employees.find(function(e){return e.id===Number(empId);});if(!emp)return;
-  var info=getPTOInfo(emp),used=getPTOUsed(emp.name);
-  openModal({title:'&#127965; Adjust PTO \u2014 '+esc(emp.name),
+  var info=getPTOInfo(emp),used=getPTOUsed(emp.name),det=getPTOUsedDetail(emp.name);
+  var detHtml=det.length?
+    '<div style="margin:10px 0"><div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Counted as used this year</div>'+
+    det.map(function(d){return'<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:6px 8px;border:1px solid var(--ln);border-radius:8px;background:#fff;margin-bottom:4px"><span>'+esc(d.type)+' &middot; '+(d.dateFrom?esc(d.dateFrom)+(d.dateTo&&d.dateTo!==d.dateFrom?' to '+esc(d.dateTo):''):'no dates')+'</span><strong>'+d.hours+'h'+(d.exact?'':' (estimated)')+'</strong></div>';}).join('')+
+    '<div style="font-size:10px;color:var(--mu)">Wrong entry here? Delete it on the Requests tab and this updates itself.</div></div>':
+    '<div style="font-size:11px;color:var(--mu);margin:10px 0">Nothing counted as used this year.</div>';
+  openModal({title:'&#127965; Adjust PTO - '+esc(emp.name),
     body:'<p style="font-size:12px;color:var(--mu);margin-bottom:10px">'+esc(info?info.note:'')+'</p>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
     '<div><label class="lbl">Total Allotment (hrs)</label><input class="field" id="pto-total" type="number" value="'+(info?info.total:0)+'" min="0" max="80"></div>'+
     '<div><label class="lbl">Used This Year (auto-calc)</label><input class="field" type="number" value="'+used+'" disabled style="background:#f0ede6"></div></div>'+
+    detHtml+
     '<label class="lbl">Reason for Adjustment</label><input class="field" id="pto-note" placeholder="e.g. Manual carry-over, special grant...">',
     btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="savePTOAdjust('+empId+')">Save</button>'});
 }
