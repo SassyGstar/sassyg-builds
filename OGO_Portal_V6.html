@@ -364,6 +364,10 @@ button,input,select,textarea{font:inherit}
               <div class="card-head"><div class="card-title"><div class="icon">&#127874;</div>Birthdays</div></div>
               <div style="padding:14px"><div class="list" id="birthdaysList"></div></div>
             </div>
+            <div class="card s4">
+              <div class="card-head"><div class="card-title"><div class="icon">&#128197;</div>Tax Season Saturdays</div><button class="btn-sm" id="satAddBtn" onclick="addSaturday()" style="display:none">+ Add</button></div>
+              <div style="padding:14px"><div class="list" id="satList"></div></div>
+            </div>
             <div class="card s6">
               <div class="card-head"><div class="card-title"><div class="icon">&#128226;</div>Announcements</div></div>
               <div style="padding:14px"><div class="list" id="annList"></div></div>
@@ -577,14 +581,32 @@ function getPTOInfo(emp){
   var isSal=PTO_SAL.indexOf(emp.name)>-1,isHr=PTO_HR.indexOf(emp.name)>-1;
   if(!isSal&&!isHr)return null;
   var ov=S.ptoOverrides&&S.ptoOverrides[emp.name];
-  if(isSal)return{type:'Salaried',total:ov?ov.total:80,status:'Active',note:ov?'Adjusted: '+ov.total+'h':'80 hrs granted annually \u00b7 Resets Jan 1'};
-  var hd=emp.hireDate?new Date(emp.hireDate+'T00:00:00'):null;
-  if(!hd)return{type:'Hourly',total:0,status:'No Hire Date',note:'Enter hire date to calculate PTO'};
-  var days=Math.floor((new Date()-hd)/86400000);
-  if(days<90)return{type:'Hourly',total:0,status:'Probation',note:'90-day probation \u00b7 '+(90-days)+' days remaining'};
-  var yrs=(new Date().getFullYear()-hd.getFullYear())+((new Date().getMonth()<hd.getMonth()||(new Date().getMonth()===hd.getMonth()&&new Date().getDate()<hd.getDate()))?-1:0);
-  if(yrs<1)return{type:'Hourly',total:40,status:'Active',note:'40 hrs \u00b7 Earns 80 hrs at 1-year anniversary'};
-  return{type:'Hourly',total:ov?ov.total:80,status:'Active',note:'80 hrs \u00b7 Resets Jan 1 each year'};
+  var res;
+  if(isSal){
+    res={type:'Salaried',total:80,status:'Active',note:'80 hrs granted annually \u00b7 Resets Jan 1'};
+  }else{
+    var hd=emp.hireDate?new Date(emp.hireDate+'T00:00:00'):null;
+    if(!hd){
+      res={type:'Hourly',total:0,status:'No Hire Date',note:'Enter hire date to calculate PTO'};
+    }else{
+      var days=Math.floor((new Date()-hd)/86400000);
+      if(days<90){
+        res={type:'Hourly',total:0,status:'Probation',note:'90-day probation \u00b7 '+(90-days)+' days remaining'};
+      }else{
+        var n=new Date();
+        var yrs=(n.getFullYear()-hd.getFullYear())+((n.getMonth()<hd.getMonth()||(n.getMonth()===hd.getMonth()&&n.getDate()<hd.getDate()))?-1:0);
+        if(yrs<1)res={type:'Hourly',total:40,status:'Active',note:'40 hrs \u00b7 Earns 80 hrs at 1-year anniversary'};
+        else res={type:'Hourly',total:80,status:'Active',note:'80 hrs \u00b7 Resets Jan 1 each year'};
+      }
+    }
+  }
+  /* a manual admin adjustment always wins, whatever the policy tier says */
+  if(ov&&isFinite(Number(ov.total))){
+    res.total=Number(ov.total);
+    res.status='Active';
+    res.note='Adjusted to '+res.total+'h'+(ov.note?' \u00b7 '+ov.note:'')+(ov.updatedBy?' (by '+ov.updatedBy+')':'');
+  }
+  return res;
 }
 function ptoDayHours(r){
   if(!r.dateFrom)return 0;
@@ -675,6 +697,9 @@ function makeDefault(){
     ptoOverrides:{},
     rosterSync:'',
     eventsSync:'',
+    ptoSeed:'',
+    satSync:'',
+    workSaturdays:[{id:800,date:'2027-01-23',note:'',office:'All'},{id:801,date:'2027-01-30',note:'',office:'All'},{id:802,date:'2027-02-06',note:'',office:'All'},{id:803,date:'2027-02-13',note:'',office:'All'},{id:804,date:'2027-02-20',note:'',office:'All'},{id:805,date:'2027-02-27',note:'',office:'All'},{id:806,date:'2027-03-06',note:'',office:'All'},{id:807,date:'2027-03-13',note:'Tentative - confirm final date',office:'All'}],
     removedSeeds:{events:[],employees:[]}
   };
 }
@@ -757,8 +782,27 @@ function fbMerge(remote){
     S.eventsSync='2026-08-17';
     evMigrated=true;
   }
+  /* one-time: publish the tax season Saturday schedule */
+  if(S.satSync!=='2026-08-17'){
+    if(!S.workSaturdays||!S.workSaturdays.length)S.workSaturdays=JSON.parse(JSON.stringify(makeDefault().workSaturdays));
+    S.satSync='2026-08-17';
+    evMigrated=true;
+  }
+  /* one-time: record Bianca Sanchez time off Jul 28 to Aug 18 2026 */
+  if(S.ptoSeed!=='2026-08-17'){
+    if(!S.requests)S.requests=[];
+    var hasBianca=S.requests.some(function(r){return r.requester==='Bianca Sanchez'&&(r.type==='PTO'||r.type==='Vacation')&&r.dateFrom==='2026-07-28';});
+    if(!hasBianca){
+      S.requests.push({id:S.nextId++,type:'PTO',requester:'Bianca Sanchez',office:'Clermont',
+        dateFrom:'2026-07-28',dateTo:'2026-08-18',ptoHours:'40',ptoYear:'2026',
+        status:'Approved',reviewedBy:'Gina Altidor',reviewedAt:'Aug 17, 2026',
+        reviewNote:'Time off Jul 28 to Aug 18 2026. 40 hrs PTO (full first-year balance); remaining days not charged to PTO.',
+        notes:'Out of office Jul 28 to Aug 18, 2026'});
+    }
+    S.ptoSeed='2026-08-17';
+    evMigrated=true;
+  }
   /* ensure seed events present */
-  makeDefault().events.forEach(function(se){if(rmV.indexOf(se.id)>-1)return;if(!S.events.find(function(e){return e.id===se.id;}))S.events.push(se);});
   S.events.sort(function(a,b){return new Date(a.date)-new Date(b.date);});
   /* ensure tc exists */
   if(!S.tc||typeof S.tc!=='object')S.tc={entries:{},active:{}};
@@ -1283,7 +1327,7 @@ function renderDash(){
     kg.innerHTML='<div class="kpi"><div class="k-lbl">Employees</div><div class="k-val">'+emps+'</div></div><div class="kpi"><div class="k-lbl">Events</div><div class="k-val">'+evts+'</div></div><div class="kpi"><div class="k-lbl">Open Tasks</div><div class="k-val">'+tasks+'</div></div><div class="kpi"><div class="k-lbl">Clients</div><div class="k-val">'+clients+'</div></div>';}
   const al=document.getElementById('alertsList');
   if(al){const items=[];const soon=S.events.filter(vo).filter(function(e){const d=du(e.date);return d>=0&&d<=7;});if(soon.length)items.push('\uD83D\uDCC5 '+soon.length+' event'+(soon.length>1?'s':'')+' within 7 days.');const bm=S.employees.filter(function(e){return e.bday&&new Date(e.bday+'T00:00:00').getMonth()===new Date().getMonth()&&(o==='All'||e.office===o);});if(bm.length)items.push('\uD83C\uDF82 '+bm.length+' birthday'+(bm.length>1?'s':'')+' this month!');const pend=(S.requests||[]).filter(vo).filter(function(r){return r.status==='Pending';});if(pend.length)items.push('\uD83D\uDCDD '+pend.length+' pending request'+(pend.length>1?'s':'')+' awaiting review.');al.innerHTML=items.length?items.map(function(t){return'<div class="alert-item">'+t+'</div>';}).join(''):'<div class="empty">All clear \u2014 no alerts.</div>';}
-  renderEventsList();renderBdays();renderAnns();renderTodos();renderNotifs();
+  renderEventsList();renderBdays();renderSaturdays();renderAnns();renderTodos();renderNotifs();
 }
 function renderEventsList(){
   const el=document.getElementById('eventsList');if(!el)return;
@@ -1309,6 +1353,48 @@ function renderEventsList(){
   }).join(''):'<div class="empty">No events.</div>';
 }
 function setRSVP(eid,status){const me=S.employees.find(function(e){return e.name===(CU?CU.name:'');});if(!me){toast('Sign in first.');return;}if(!S.rsvps)S.rsvps={};if(!S.rsvps[eid])S.rsvps[eid]={};S.rsvps[eid][me.id]=status;const ev=S.events.find(function(e){return e.id===eid;});if(ev){ev.attendees=ev.attendees||[];if(status==='Going'&&!ev.attendees.includes(me.id))ev.attendees.push(me.id);if(status!=='Going')ev.attendees=ev.attendees.filter(function(a){return a!==me.id;});}fbSave();renderAll();toast('RSVP: '+status);}
+function renderSaturdays(){
+  var el=document.getElementById('satList');if(!el)return;
+  var btn=document.getElementById('satAddBtn');if(btn)btn.style.display=S.adminMode?'inline-flex':'none';
+  var all=(S.workSaturdays||[]).slice().sort(function(a,b){return a.date<b.date?-1:1;});
+  var today=ldate();
+  var upcoming=all.filter(function(s){return s.date>=today;});
+  var shown=upcoming.length?upcoming:all;
+  if(!shown.length){el.innerHTML='<div class="empty">No work Saturdays scheduled.</div>';return;}
+  el.innerHTML=shown.map(function(s){
+    var d=du(s.date);
+    var cls=d<0?'past':d===0?'today':d<=7?'soon':'';
+    var txt=d<0?'Past':d===0?'Today':d<=7?'In '+d+' days':'Upcoming';
+    return'<div class="item"><div class="dot"></div><div class="item-main">'+
+      '<div class="item-ttl">'+fd(s.date)+'</div>'+
+      (s.note?'<div class="meta">'+esc(s.note)+'</div>':'')+
+      '<div class="chips"><span class="chip '+cls+'">'+txt+'</span>'+
+      (s.office&&s.office!=='All'?'<span class="chip">'+esc(s.office)+'</span>':'')+'</div></div>'+
+      (S.adminMode?'<button class="ic-btn" title="Remove" onclick="removeSaturday('+JSON.stringify(s.id)+')">&#10005;</button>':'')+
+    '</div>';
+  }).join('')+(upcoming.length?'':'<div class="meta" style="margin-top:6px">All scheduled Saturdays have passed.</div>');
+}
+function addSaturday(){
+  openModal({title:'Add Work Saturday',
+    body:'<label class="lbl">Date</label><input class="field" id="sat-date" type="date">'+
+      '<label class="lbl">Note (optional)</label><input class="field" id="sat-note" placeholder="e.g. 9AM to 2PM">'+
+      '<label class="lbl">Office</label><select class="field" id="sat-office">'+offOpts('All',true)+'</select>',
+    btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="saveSaturday()">Add</button>'});
+}
+function saveSaturday(){
+  var d=tv('sat-date');if(!d){toast('Pick a date.');return;}
+  if(!S.workSaturdays)S.workSaturdays=[];
+  if(S.workSaturdays.some(function(s){return s.date===d;})){toast('That date is already listed.');return;}
+  S.workSaturdays.push({id:S.nextId++,date:d,note:tv('sat-note'),office:tv('sat-office')||'All'});
+  addLog('Work Saturday added: '+d+'.','All',CU?CU.name:'Admin');
+  fbSave();closeModal();renderAll();toast('Saturday added.');
+}
+function removeSaturday(id){
+  if(!confirm('Remove this work Saturday from the schedule?'))return;
+  S.workSaturdays=(S.workSaturdays||[]).filter(function(s){return String(s.id)!==String(id);});
+  addLog('Work Saturday removed.','All',CU?CU.name:'Admin');
+  fbSave();renderAll();toast('Removed.');
+}
 function renderBdays(){const el=document.getElementById('birthdaysList');if(!el)return;const o=S.activeOffice;const month=new Date().getMonth();const bdays=S.employees.filter(function(e){return e.bday&&(o==='All'||e.office===o);}).sort(function(a,b){const am=new Date(a.bday+'T00:00:00').getMonth(),bm=new Date(b.bday+'T00:00:00').getMonth(),ad=new Date(a.bday+'T00:00:00').getDate(),bd=new Date(b.bday+'T00:00:00').getDate(),at=am===month?0:1,bt=bm===month?0:1;return at!==bt?at-bt:am!==bm?am-bm:ad-bd;});el.innerHTML=bdays.length?bdays.map(function(e){const isT=new Date(e.bday+'T00:00:00').getMonth()===month&&new Date(e.bday+'T00:00:00').getDate()===new Date().getDate();const isM=new Date(e.bday+'T00:00:00').getMonth()===month;return'<div class="item"><div class="avatar">'+ini(e.name)+'</div><div class="item-main"><div class="item-ttl">'+esc(e.name)+'</div><div class="meta">'+fs(e.bday)+' \u00B7 '+esc(e.office)+'</div>'+(isT?'<span class="chip today">\uD83C\uDF82 Today!</span>':isM?'<span class="chip today">This month!</span>':'')+' </div></div>';}).join(''):'<div class="empty">No birthdays found.</div>';}
 function renderAnns(){const el=document.getElementById('annList');if(!el)return;const items=S.announcements.filter(vo);el.innerHTML=items.length?items.map(function(a){return'<div class="item"><div class="dot blue"></div><div class="item-main"><div class="item-ttl">'+esc(a.text)+'</div><div class="chips"><span class="chip">'+esc(a.tag||'Note')+'</span><span class="chip" style="background:#eaf1fd;color:#234f97">'+esc(a.office)+'</span></div></div>'+(S.adminMode?'<div class="actions"><button class="ic-btn" onclick=\'editAnn('+JSON.stringify(a).replace(/'/g,"&#39;")+')\'>&#9998;</button><button class="ic-btn" onclick="deleteAnn('+a.id+')">&#10005;</button></div>':'')+' </div>';}).join(''):'<div class="empty">No announcements.</div>';}
 function renderTodos(){const el=document.getElementById('todoList');if(!el)return;const items=S.todos.filter(vo);el.innerHTML=items.length?items.map(function(t){return'<div class="item"><button class="ic-btn" onclick="toggleTodo('+t.id+')">'+(t.done?'&#10003;':'&#9675;')+'</button><div class="item-main"><div class="item-ttl" style="'+(t.done?'text-decoration:line-through;color:var(--mu)':'')+'">'+esc(t.label)+'</div></div>'+(S.adminMode?'<button class="ic-btn" onclick="deleteTodo('+t.id+')">&#10005;</button>':'')+' </div>';}).join(''):'<div class="empty">All done!</div>';}
@@ -1521,28 +1607,79 @@ function renderPTO(){
 function adjustPTO(empId){
   var emp=S.employees.find(function(e){return e.id===Number(empId);});if(!emp)return;
   var info=getPTOInfo(emp),used=getPTOUsed(emp.name),det=getPTOUsedDetail(emp.name);
-  var detHtml=det.length?
-    '<div style="margin:10px 0"><div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Counted as used this year</div>'+
-    det.map(function(d){return'<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:6px 8px;border:1px solid var(--ln);border-radius:8px;background:#fff;margin-bottom:4px"><span>'+esc(d.type)+' &middot; '+(d.dateFrom?esc(d.dateFrom)+(d.dateTo&&d.dateTo!==d.dateFrom?' to '+esc(d.dateTo):''):'no dates')+'</span><strong>'+d.hours+'h'+(d.exact?'':' (estimated)')+'</strong></div>';}).join('')+
-    '<div style="font-size:10px;color:var(--mu)">Wrong entry here? Delete it on the Requests tab and this updates itself.</div></div>':
-    '<div style="font-size:11px;color:var(--mu);margin:10px 0">Nothing counted as used this year.</div>';
-  openModal({title:'&#127965; Adjust PTO - '+esc(emp.name),
-    body:'<p style="font-size:12px;color:var(--mu);margin-bottom:10px">'+esc(info?info.note:'')+'</p>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
-    '<div><label class="lbl">Total Allotment (hrs)</label><input class="field" id="pto-total" type="number" value="'+(info?info.total:0)+'" min="0" max="80"></div>'+
-    '<div><label class="lbl">Used This Year (auto-calc)</label><input class="field" type="number" value="'+used+'" disabled style="background:#f0ede6"></div></div>'+
-    detHtml+
-    '<label class="lbl">Reason for Adjustment</label><input class="field" id="pto-note" placeholder="e.g. Manual carry-over, special grant...">',
-    btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="savePTOAdjust('+empId+')">Save</button>'});
+  var rem=info?Math.max(0,info.total-used):0;
+  var rows=det.length?det.map(function(d){
+      return'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;padding:6px 8px;border:1px solid var(--ln);border-radius:8px;background:#fff;margin-bottom:4px">'+
+        '<span style="flex:1">'+esc(d.type)+' &middot; '+(d.dateFrom?esc(d.dateFrom)+(d.dateTo&&d.dateTo!==d.dateFrom?' to '+esc(d.dateTo):''):'no dates')+'</span>'+
+        '<strong>'+d.hours+'h'+(d.exact?'':' (estimated)')+'</strong>'+
+        '<button title="Remove this PTO entry" onclick="ptoRemoveEntry('+empId+','+JSON.stringify(d.id)+')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 2px">&#10005;</button>'+
+      '</div>';}).join(''):
+    '<div style="font-size:11px;color:var(--mu);padding:4px 0">Nothing counted as used this year.</div>';
+  openModal({title:'&#127965; PTO - '+esc(emp.name),
+    body:'<div style="background:var(--glt);border:1px solid var(--ln);border-radius:10px;padding:9px 11px;margin-bottom:10px;font-size:12px">'+
+      '<strong style="color:var(--navy)">'+(info?info.total:0)+'h allotted</strong> &middot; used <strong>'+used+'h</strong> &middot; remaining <strong style="color:'+(rem>0?'var(--green)':'var(--red)')+'">'+rem+'h</strong>'+
+      '<div style="font-size:10px;color:var(--mu);margin-top:3px">'+esc(info?info.note:'')+'</div></div>'+
+    '<div style="font-size:11px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Time off counted this year</div>'+rows+
+    '<div style="border:1px solid var(--ln);border-radius:10px;padding:10px;background:#faf8f3;margin:10px 0">'+
+      '<div style="font-size:11px;font-weight:800;color:var(--navy);margin-bottom:7px">Add time off</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 80px;gap:7px">'+
+        '<div><label class="lbl">From</label><input class="field" id="pto-add-from" type="date"></div>'+
+        '<div><label class="lbl">To</label><input class="field" id="pto-add-to" type="date"></div>'+
+        '<div><label class="lbl">Hours</label><input class="field" id="pto-add-hours" type="number" min="0" step="0.5" placeholder="8"></div>'+
+      '</div>'+
+      '<label class="lbl">Note</label><input class="field" id="pto-add-note" placeholder="Reason, e.g. approved time off">'+
+      '<button class="btn-sm" style="margin-top:7px;font-weight:800" onclick="ptoAddEntry('+empId+')">+ Add PTO Entry</button>'+
+      '<div style="font-size:10px;color:var(--mu);margin-top:4px">Leave Hours blank to count the weekdays between the dates (8 hrs per day).</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr;gap:8px">'+
+      '<div><label class="lbl">Total Allotment (hrs) - overrides the policy amount</label><input class="field" id="pto-total" type="number" value="'+(info?info.total:0)+'" min="0" max="240"></div>'+
+      '<div><label class="lbl">Reason for changing the allotment</label><input class="field" id="pto-note" placeholder="e.g. carry-over, special grant" value="'+esc(S.ptoOverrides&&S.ptoOverrides[emp.name]?S.ptoOverrides[emp.name].note||'':'')+'"></div>'+
+    '</div>',
+    btns:'<button class="btn-sec" onclick="closeModal()">Close</button>'+
+      (S.ptoOverrides&&S.ptoOverrides[emp.name]?'<button class="btn-danger" onclick="ptoClearOverride('+empId+')">Reset to Policy</button>':'')+
+      '<button class="btn-pri" onclick="savePTOAdjust('+empId+')">Save Allotment</button>'});
+}
+function ptoAddEntry(empId){
+  var emp=S.employees.find(function(e){return e.id===Number(empId);});if(!emp)return;
+  var from=tv('pto-add-from'),to=tv('pto-add-to'),hrs=tv('pto-add-hours'),note=tv('pto-add-note');
+  if(!from){toast('Pick a From date.');return;}
+  if(to&&to<from){toast('To date must be on or after the From date.');return;}
+  if(hrs!==''&&!isFinite(Number(hrs))){toast('Hours must be a number.');return;}
+  if(!S.requests)S.requests=[];
+  S.requests.push({id:S.nextId++,type:'PTO',requester:emp.name,office:emp.office,
+    dateFrom:from,dateTo:to||from,ptoHours:hrs,ptoYear:String(new Date(from+'T00:00:00').getFullYear()),
+    status:'Approved',reviewedBy:CU?CU.name:'Admin',
+    reviewedAt:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+    reviewNote:'Added from the PTO tab'+(note?': '+note:''),notes:note});
+  addLog('PTO recorded for '+emp.name+' ('+from+(to&&to!==from?' to '+to:'')+(hrs?', '+hrs+'h':'')+').','All',CU?CU.name:'Admin');
+  fbSave();renderPTO();adjustPTO(empId);
+  toast('PTO entry added for '+emp.name+'.');
+}
+function ptoRemoveEntry(empId,reqId){
+  var emp=S.employees.find(function(e){return e.id===Number(empId);});if(!emp)return;
+  if(!confirm('Remove this PTO entry for '+emp.name+'? The hours go back into their balance.'))return;
+  S.requests=(S.requests||[]).filter(function(r){return String(r.id)!==String(reqId);});
+  addLog('PTO entry removed for '+emp.name+'.','All',CU?CU.name:'Admin');
+  fbSave();renderPTO();adjustPTO(empId);
+  toast('Entry removed. Balance updated.');
+}
+function ptoClearOverride(empId){
+  var emp=S.employees.find(function(e){return e.id===Number(empId);});if(!emp)return;
+  if(!confirm('Reset '+emp.name+' back to the standard policy allotment?'))return;
+  if(S.ptoOverrides)delete S.ptoOverrides[emp.name];
+  addLog('PTO allotment reset to policy for '+emp.name+'.','All',CU?CU.name:'Admin');
+  fbSave();renderPTO();adjustPTO(empId);
+  toast('Reset to policy allotment.');
 }
 function savePTOAdjust(empId){
   var emp=S.employees.find(function(e){return e.id===Number(empId);});if(!emp)return;
-  var total=parseInt((document.getElementById('pto-total')||{}).value)||0;
+  var total=parseInt((document.getElementById('pto-total')||{}).value);
+  if(!isFinite(total)||total<0){toast('Enter a valid number of hours.');return;}
   var note=(document.getElementById('pto-note')||{}).value||'';
   if(!S.ptoOverrides)S.ptoOverrides={};
   S.ptoOverrides[emp.name]={total:total,note:note,updatedAt:Date.now(),updatedBy:CU?CU.name:'Admin'};
-  addLog('PTO adjusted for '+emp.name+' to '+total+'h.','All',CU?CU.name:'Admin');
-  fbSave();closeModal();renderPTO();toast('PTO updated for '+emp.name+'.');
+  addLog('PTO allotment set to '+total+'h for '+emp.name+'.','All',CU?CU.name:'Admin');
+  fbSave();closeModal();renderPTO();toast('Allotment updated for '+emp.name+'.');
 }
 
 function startClock(){
