@@ -1,5 +1,5 @@
 /**
- * 24 Hour Laundry Equipment — QuickBooks Online integration
+ * 24 Hour Commercial Laundry Equipment — QuickBooks Online integration
  * Firebase Cloud Functions (Node 20, firebase-functions v2)
  *
  * WHY THIS FILE EXISTS
@@ -162,17 +162,27 @@ async function qboFetch(path, options = {}, attempt = 0) {
 
 /* ----------------------------------------------------------------- caller  */
 
-/** Verify the Firebase ID token and require an office or owner claim. */
-async function requireOfficeUser(req) {
+/**
+ * Four permission levels, per the specification:
+ *   owner          — everything, including cost and margin
+ *   office_manager — all jobs, customers, invoices, dispatch, estimates
+ *   admin_va       — invoicing, payments, parts follow-up, scheduling
+ *   technician     — own jobs only; SELL prices, never COST
+ *
+ * The one non-negotiable: a technician must never reach a cost figure or a
+ * money endpoint. Hiding a button in the interface is not a control, so it is
+ * enforced here and in firestore.rules.
+ */
+const BACK_OFFICE = ["owner", "office_manager", "admin_va"];
+
+async function requireBackOffice(req) {
   const header = req.get("Authorization") || "";
   const idToken = header.startsWith("Bearer ") ? header.slice(7) : null;
   if (!idToken) throw new HttpsError("unauthenticated", "Sign in first.");
   const decoded = await admin.auth().verifyIdToken(idToken);
-  const role = decoded.role;
-  if (role !== "office" && role !== "owner") {
-    // Technicians must never reach the money endpoints, and hiding the buttons
-    // in the interface is not a control.
-    throw new HttpsError("permission-denied", "Invoicing is limited to office and owner accounts.");
+  if (!BACK_OFFICE.includes(decoded.role)) {
+    throw new HttpsError("permission-denied",
+      "Invoicing and payments are limited to the owner and office accounts.");
   }
   return decoded;
 }
@@ -278,7 +288,7 @@ exports.qboCreateInvoice = onRequest(withSecrets, async (req, res) => {
   CORS(res);
   if (req.method === "OPTIONS") return res.status(204).send("");
   try {
-    const user = await requireOfficeUser(req);
+    const user = await requireBackOffice(req);
     const { workOrderId, invoice } = req.body || {};
     if (!workOrderId || !invoice) throw new Error("workOrderId and invoice are both required.");
 
@@ -295,6 +305,32 @@ exports.qboCreateInvoice = onRequest(withSecrets, async (req, res) => {
       if (!line.SalesItemLineDetail?.ItemRef?.value) {
         throw new Error(`Invoice line "${line.Description || ""}" has no QuickBooks item reference.`);
       }
+    }
+
+    const customer = (await db.collection("customers").doc(wo.customerId).get()).data() || {};
+
+    // Standing rule: parts on the invoice means freight on the invoice, in
+    // QuickBooks' dedicated shipping field. A person confirms the amount — the
+    // ~$30 default is a prompt, never something that posts silently.
+    if ((wo.partsUsed || []).length && !(wo.shipping && wo.shipping.confirmed)) {
+      throw new Error("There are parts on this work order and nobody has confirmed the freight amount.");
+    }
+
+    // A tax-exempt account is never taxed, and we refuse to be the reason it was.
+    if (customer.taxExempt) {
+      if (!customer.exemptCertOnFile) {
+        throw new Error(`${customer.companyName} is flagged tax exempt with no certificate on file.`);
+      }
+      invoice.TxnTaxDetail = { TxnTaxCodeRef: { value: "NON" } };
+      for (const line of invoice.Line || []) {
+        if (line.SalesItemLineDetail) line.SalesItemLineDetail.TaxCodeRef = { value: "NON" };
+      }
+    }
+
+    // PO number is a hard requirement on the accounts that demand one — it is a
+    // top cause of aged receivables when it is missing.
+    if (customer.poRequired && !wo.poNumber) {
+      throw new Error(`${customer.companyName} requires a PO number and this work order has none.`);
     }
 
     const created = await qboFetch("/invoice", { method: "POST", body: JSON.stringify(invoice) });
@@ -326,7 +362,7 @@ exports.qboCreateCustomer = onRequest(withSecrets, async (req, res) => {
   CORS(res);
   if (req.method === "OPTIONS") return res.status(204).send("");
   try {
-    await requireOfficeUser(req);
+    await requireBackOffice(req);
     const { customerId } = req.body || {};
     const ref = db.collection("customers").doc(customerId);
     const c = (await ref.get()).data();
@@ -372,7 +408,7 @@ exports.qboOpenInvoices = onRequest(withSecrets, async (req, res) => {
   CORS(res);
   if (req.method === "OPTIONS") return res.status(204).send("");
   try {
-    await requireOfficeUser(req);
+    await requireBackOffice(req);
     const cached = await db.collection("cache").doc("qboOpenInvoices").get();
     const data = cached.data();
     // Cache aggressively: the customer and item lists especially should not be
@@ -399,12 +435,65 @@ exports.qboOpenInvoices = onRequest(withSecrets, async (req, res) => {
   }
 });
 
+/**
+ * Record a customer payment against an invoice.
+ *
+ * This exists because checks deposited by mobile deposit were not making it
+ * into QuickBooks, which left false open balances and generated late fees on
+ * customers who had already paid. Payment recording is therefore a deliberate,
+ * audited step: funds confirmed at the bank, reference captured, pushed here.
+ */
+exports.qboRecordPayment = onRequest(withSecrets, async (req, res) => {
+  CORS(res);
+  if (req.method === "OPTIONS") return res.status(204).send("");
+  try {
+    const user = await requireBackOffice(req);
+    const { paymentId } = req.body || {};
+    const ref = db.collection("payments").doc(paymentId);
+    const pay = (await ref.get()).data();
+    if (!pay) throw new Error("Payment record not found.");
+    if (pay.pushedToQbo) throw new Error("This payment has already been posted to QuickBooks.");
+    if (!pay.reference) throw new Error("A check number or reference is required before posting.");
+
+    const customer = (await db.collection("customers").doc(pay.customerId).get()).data() || {};
+    if (!customer.qboCustomerId) throw new Error("Customer is not linked to QuickBooks.");
+
+    const created = await qboFetch("/payment", {
+      method: "POST",
+      body: JSON.stringify({
+        CustomerRef: { value: customer.qboCustomerId },
+        TotalAmt: pay.amount,
+        PaymentRefNum: String(pay.reference).slice(0, 21),
+        TxnDate: new Date(pay.confirmedAt).toISOString().slice(0, 10),
+        Line: [{
+          Amount: pay.amount,
+          LinkedTxn: [{ TxnId: pay.invoiceId, TxnType: "Invoice" }],
+        }],
+        PrivateNote: `Recorded by ${user.uid}${pay.note ? " — " + pay.note : ""}`,
+      }),
+    });
+
+    await ref.update({
+      pushedToQbo: true,
+      qboPaymentId: created.Payment.Id,
+      pushedAt: admin.firestore.FieldValue.serverTimestamp(),
+      pushedBy: user.uid,
+    });
+    // The receivables cache is now stale; drop it so the aging panel refreshes.
+    await db.collection("cache").doc("qboOpenInvoices").delete().catch(() => {});
+
+    res.json({ qboPaymentId: created.Payment.Id });
+  } catch (e) {
+    sendError(res, e);
+  }
+});
+
 /** Connection health, for a status light in Settings. */
 exports.qboStatus = onRequest(withSecrets, async (req, res) => {
   CORS(res);
   if (req.method === "OPTIONS") return res.status(204).send("");
   try {
-    await requireOfficeUser(req);
+    await requireBackOffice(req);
     const t = await readTokens();
     const daysSinceRefresh = (Date.now() - (t.refreshTokenRefreshedAt || 0)) / 86_400_000;
     res.json({
@@ -427,10 +516,15 @@ exports.setUserRole = onCall(async (request) => {
   if (request.auth?.token?.role !== "owner") {
     throw new HttpsError("permission-denied", "Only the owner can set roles.");
   }
-  const { uid, role } = request.data;
-  if (!["technician", "office", "owner"].includes(role)) {
+  const { uid, role, techId } = request.data;
+  if (!["technician", "office_manager", "admin_va", "owner"].includes(role)) {
     throw new HttpsError("invalid-argument", "Unknown role.");
   }
-  await admin.auth().setCustomUserClaims(uid, { role });
+  // A technician's claim carries their tech id so the rules can scope them to
+  // their own jobs without a lookup on every read.
+  if (role === "technician" && !techId) {
+    throw new HttpsError("invalid-argument", "A technician needs a techId on the claim.");
+  }
+  await admin.auth().setCustomUserClaims(uid, techId ? { role, techId } : { role });
   return { ok: true };
 });

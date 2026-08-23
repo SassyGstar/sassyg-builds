@@ -1,0 +1,189 @@
+rules_version = '2';
+
+/**
+ * 24 Hour Commercial Laundry Equipment — Firestore security rules
+ *
+ * Four permission levels, set as Firebase Auth custom claims by setUserRole:
+ *   owner          — everything, including cost and margin
+ *   office_manager — all jobs, customers, invoices, dispatch, estimates
+ *   admin_va       — invoicing, payments, parts follow-up, scheduling
+ *   technician     — own jobs only
+ *
+ * THE NON-NEGOTIABLE: technicians see SELL prices, never COST prices.
+ * Firestore grants or denies whole documents, not fields, so cost cannot simply
+ * be hidden on a record a technician can read. Every cost figure therefore
+ * lives in a separate document a technician has no read on:
+ *   parts/{id}              readable by all staff — sell price, stock, fitment
+ *   parts/{id}/costing/data owner and office only — cost, last purchase price
+ *   technicians/{id}/pay    owner only — pay rate
+ * Hiding a button in the interface is not a control. This file is the control.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()  { return request.auth != null; }
+    function role()      { return request.auth.token.role; }
+    function isTech()    { return signedIn() && role() == 'technician'; }
+    function isOwner()   { return signedIn() && role() == 'owner'; }
+    function isOffice()  { return signedIn() && (role() == 'office_manager' || role() == 'admin_va'); }
+    function isStaff()   { return isOwner() || isOffice(); }
+    function myTechId()  { return request.auth.token.techId; }
+
+    /* ---- QuickBooks credentials -------------------------------------------
+       The refresh token and realm id live here. No client of any role reads
+       this, ever. Only the Cloud Functions service account, which bypasses
+       these rules entirely, can touch it. */
+    match /integrations/{doc} { allow read, write: if false; }
+    match /cache/{doc} {
+      allow read:  if isStaff();
+      allow write: if false;                    // written by the polling function
+    }
+
+    /* ---- customers -------------------------------------------------------- */
+    match /customers/{customerId} {
+      // A technician needs the company name and whether a PO is required.
+      allow read:   if signedIn();
+      // Identity flows one way: QuickBooks issues the id, we store it. A
+      // customer is never born in the dashboard, which is what stops duplicates.
+      allow create: if isStaff() && request.resource.data.qboCustomerId is string;
+      allow update: if isStaff();
+      allow delete: if isOwner();
+
+      // Card token, credit notes, collections history.
+      match /private/{doc} { allow read, write: if isStaff(); }
+    }
+
+    match /sites/{siteId} {
+      allow read:  if signedIn();                // gate codes and access notes are the job
+      allow write: if isStaff();
+    }
+
+    match /equipment/{equipmentId} {
+      allow read:   if signedIn();
+      // A technician sets a machine's status from the completion flow, nothing else.
+      allow update: if isStaff() || (
+                      isTech() &&
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status', 'lastServicedAt'])
+                    );
+      allow create, delete: if isStaff();
+    }
+
+    /* ---- work orders ------------------------------------------------------ */
+    match /workOrders/{workOrderId} {
+      allow read: if isStaff() || (isTech() && myTechId() in resource.data.assignedTechIds);
+      allow create: if isStaff();
+
+      // A technician may only touch their own job, only the fields the field
+      // flow writes, and can never invoice it or reassign it to someone else.
+      allow update: if isStaff() || (
+        isTech() &&
+        myTechId() in resource.data.assignedTechIds &&
+        request.resource.data.assignedTechIds == resource.data.assignedTechIds &&
+        request.resource.data.customerId == resource.data.customerId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','jobClock','diagnosis','workPerformed','recommendations',
+          'partsUsed','photos','signature','signerName','poNumber',
+          'toolingFee','shipping','quoteAmount','estimateId'
+        ]) &&
+        // Invoicing belongs to the office. A technician marking their own work
+        // invoiced or paid is how revenue goes missing.
+        request.resource.data.status in ['en_route','on_site','completed'] &&
+        request.resource.data.qboInvoiceId == resource.data.qboInvoiceId
+      );
+      allow delete: if isOwner();
+    }
+
+    /* ---- people, pay and time --------------------------------------------- */
+    match /technicians/{techId} {
+      allow read:  if signedIn();                // names and numbers are needed to dispatch
+      allow write: if isStaff();
+      match /pay/{doc} { allow read, write: if isOwner(); }   // pay rate is the owner's alone
+    }
+    match /users/{userId} {
+      allow read:  if signedIn() && (request.auth.uid == userId || isStaff());
+      allow write: if isOwner();
+    }
+
+    // Payroll clock — a day. Separate from the job clock on purpose.
+    match /timeClock/{entryId} {
+      allow read:   if isStaff() || (isTech() && resource.data.techId == myTechId());
+      allow create: if isStaff() || (isTech() && request.resource.data.techId == myTechId());
+      // A technician closes out their own day but cannot rewrite the date on it.
+      allow update: if isStaff() || (
+                      isTech() && resource.data.techId == myTechId() &&
+                      request.resource.data.date == resource.data.date &&
+                      request.resource.data.clockIn == resource.data.clockIn
+                    );
+      allow delete: if isOwner();
+    }
+
+    /* ---- parts and inventory ----------------------------------------------
+       Sell price, stock and fitment are on the parent document. COST is not. */
+    match /parts/{partId} {
+      allow read: if signedIn();
+      // Van stock moves when a technician consumes a part on a job, and a tech
+      // can raise the needs-ordering flag. Nothing else.
+      allow update: if isStaff() || (
+                      isTech() &&
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['stock','needsOrdering']) &&
+                      request.resource.data.sellPrice == resource.data.sellPrice
+                    );
+      allow create, delete: if isStaff();
+
+      // Our cost, last purchase price, vendor pricing. Never a technician.
+      match /costing/{doc} { allow read, write: if isStaff(); }
+    }
+
+    match /vendors/{vendorId}        { allow read: if isStaff(); allow write: if isOwner(); }
+    match /purchaseOrders/{poId}     { allow read, write: if isStaff(); }
+    match /inventoryMoves/{moveId} {
+      allow read:   if isStaff();
+      allow create: if signedIn();               // the mover is recorded, whoever they are
+      allow update, delete: if false;            // an audit record is not editable
+    }
+
+    /* ---- money ------------------------------------------------------------ */
+    match /invoices/{invoiceId} {
+      allow read:  if isStaff();                 // technicians see no invoices at all
+      allow write: if false;                     // only the Cloud Functions write these
+    }
+    match /payments/{paymentId} {
+      allow read:   if isStaff();
+      allow create: if isStaff() &&
+                    // The check number is the whole point of the payment step.
+                    request.resource.data.reference is string &&
+                    request.resource.data.reference.size() > 0;
+      allow update: if isStaff();
+      allow delete: if isOwner();
+    }
+    match /estimates/{estimateId} {
+      allow read:   if isStaff() || (isTech() && resource.data.createdBy == request.auth.uid);
+      allow create: if signedIn();               // techs quote on site, that is the point
+      allow update: if isStaff();
+      allow delete: if isOwner();
+    }
+
+    /* ---- price book: the customer-facing sheet ----------------------------
+       Everyone can read it — a technician carrying it is the whole feature.
+       Only the owner changes a price. */
+    match /priceBook/{itemId} {
+      allow read:  if signedIn();
+      allow write: if isOwner();
+    }
+
+    /* ---- business rules --------------------------------------------------- */
+    match /settings/{doc} {
+      allow read:  if signedIn();
+      allow write: if isOwner();
+    }
+
+    /* ---- audit trail: append only ----------------------------------------- */
+    match /auditLog/{entryId} {
+      allow read:   if isOwner();
+      allow create: if signedIn();
+      allow update, delete: if false;
+    }
+  }
+}

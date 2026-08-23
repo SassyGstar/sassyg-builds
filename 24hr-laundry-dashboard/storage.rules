@@ -1,0 +1,44 @@
+rules_version = '2';
+
+/**
+ * 24 Hour Commercial Laundry Equipment — Storage rules
+ *
+ * Job photos (before, after, serial tag, damage), signed work orders and
+ * receipts. Photos come off a phone in a hotel basement, so the size cap is
+ * generous enough to be usable and tight enough that nobody uploads a video by
+ * accident.
+ */
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() { return request.auth != null; }
+    function role()     { return request.auth.token.role; }
+    function isStaff()  { return signedIn() &&
+      (role() == 'owner' || role() == 'office_manager' || role() == 'admin_va'); }
+    function isImage()  { return request.resource.contentType.matches('image/.*'); }
+    function underSize(){ return request.resource.size < 8 * 1024 * 1024; }
+
+    match /workOrders/{workOrderId}/{fileName} {
+      allow read:   if signedIn();
+      allow create: if signedIn() && isImage() && underSize();
+      // A photo of what was found is evidence. It is not edited afterwards.
+      allow update: if false;
+      allow delete: if isStaff();
+    }
+
+    match /signatures/{workOrderId}/{fileName} {
+      allow read:   if signedIn();
+      allow create: if signedIn() && isImage() && underSize();
+      allow update, delete: if false;            // a signature is never overwritten
+    }
+
+    match /receipts/{purchaseOrderId}/{fileName} {
+      allow read:   if isStaff();
+      allow create: if signedIn() && underSize();
+      allow update: if false;
+      allow delete: if role() == 'owner';
+    }
+
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}
