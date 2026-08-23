@@ -1,0 +1,174 @@
+rules_version = '2';
+
+/**
+ * 24 Hour Laundry Equipment — Firestore security rules
+ *
+ * Roles are Firebase Auth custom claims, set by the setUserRole function:
+ *   technician — own jobs only, no financial data
+ *   office     — all jobs, invoicing, receivables; no labor cost or margin
+ *   owner      — everything
+ *
+ * Hiding a button in the interface is not access control. These rules are the
+ * control; the interface just avoids showing people things they would be
+ * refused anyway.
+ *
+ * A note on field-level access: Firestore grants or denies whole documents, so
+ * anything a technician must not see lives in a separate document rather than a
+ * field on one they can read. That is why pay rates and billing terms sit in
+ * `private` subcollections instead of on the parent record.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()   { return request.auth != null; }
+    function role()       { return request.auth.token.role; }
+    function isTech()     { return signedIn() && role() == 'technician'; }
+    function isOffice()   { return signedIn() && role() == 'office'; }
+    function isOwner()    { return signedIn() && role() == 'owner'; }
+    function isStaff()    { return isOffice() || isOwner(); }
+    function myTechId()   { return request.auth.token.techId; }
+
+    /* ---- QuickBooks credentials -------------------------------------------
+       The refresh token and realm id live here. No client of any role may read
+       this, ever. Only the Cloud Functions service account, which bypasses
+       these rules entirely, can touch it. */
+    match /integrations/{doc} {
+      allow read, write: if false;
+    }
+    match /cache/{doc} {
+      allow read:  if isStaff();
+      allow write: if false;          // written by the polling function only
+    }
+
+    /* ---- customers --------------------------------------------------------
+       Technicians need the company name and whether a PO is required, so they
+       can read the record. Payment terms, balances and anything else the office
+       owns live in the private subdocument. */
+    match /customers/{customerId} {
+      allow read:   if signedIn();
+      allow create: if isStaff()
+                    // Identity flows one way: QuickBooks issues the id. A
+                    // customer must never be born in the dashboard.
+                    && request.resource.data.qboCustomerId is string;
+      allow update: if isStaff();
+      allow delete: if isOwner();
+
+      match /private/{doc} {
+        allow read, write: if isStaff();
+      }
+    }
+
+    match /locations/{locationId} {
+      allow read:  if signedIn();     // access notes and gate codes are the job
+      allow write: if isStaff();
+    }
+
+    match /equipment/{equipmentId} {
+      allow read:   if signedIn();
+      // A technician may set a machine's status from the completion flow and
+      // nothing else on the record.
+      allow update: if isStaff() || (
+                      isTech() &&
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['status', 'lastServicedAt'])
+                    );
+      allow create, delete: if isStaff();
+    }
+
+    /* ---- work orders ------------------------------------------------------ */
+    match /workOrders/{workOrderId} {
+      allow read: if isStaff() || (isTech() && resource.data.assignedTechId == myTechId());
+
+      allow create: if isStaff();
+
+      // A technician can only touch their own job, only the fields the
+      // completion flow writes, and can never set an invoice id or reassign it.
+      allow update: if isStaff() || (
+        isTech() &&
+        resource.data.assignedTechId == myTechId() &&
+        request.resource.data.assignedTechId == resource.data.assignedTechId &&
+        request.resource.data.customerId == resource.data.customerId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status','arrivedAt','completedAt','diagnosis','workPerformed',
+          'laborEntries','partsUsed','photos','customerSignature','signerName',
+          'poNumber','warrantyClaim','warrantyProvider','truckCharge'
+        ]) &&
+        // Invoicing is the office's job. A technician marking their own work
+        // "invoiced" is how revenue goes missing.
+        request.resource.data.status in ['in_progress','complete'] &&
+        request.resource.data.qboInvoiceId == resource.data.qboInvoiceId
+      );
+
+      allow delete: if isOwner();
+    }
+
+    /* ---- people and pay ---------------------------------------------------
+       The technician record is readable (names and phone numbers are needed to
+       dispatch). Hourly rates are not on it — they live in pay/, which only the
+       owner can read, because office staff have no business seeing payroll. */
+    match /technicians/{techId} {
+      allow read:  if signedIn();
+      allow write: if isStaff();
+
+      match /pay/{doc} {
+        allow read, write: if isOwner();
+      }
+    }
+
+    match /users/{userId} {
+      allow read:  if signedIn() && (request.auth.uid == userId || isStaff());
+      allow write: if isOwner();
+    }
+
+    /* ---- fleet ------------------------------------------------------------ */
+    match /vehicles/{vehicleId} {
+      allow read:   if signedIn();
+      // A technician updates the odometer on the van they are assigned to.
+      allow update: if isStaff() || (
+                      isTech() && resource.data.assignedTechId == myTechId() &&
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['currentOdometer'])
+                    );
+      allow create, delete: if isStaff();
+    }
+
+    match /mileageLogs/{logId} {
+      allow read:   if isStaff() || (isTech() && resource.data.techId == myTechId());
+      allow create: if isStaff() || (isTech() && request.resource.data.techId == myTechId());
+      // Contemporaneous records are what make a mileage log defensible, so the
+      // server stamps the time and nobody backdates an entry.
+      allow update:  if isStaff() || (
+                      isTech() && resource.data.techId == myTechId() &&
+                      request.resource.data.date == resource.data.date
+                    );
+      allow delete: if isOwner();
+    }
+
+    match /fuelLogs/{logId} {
+      allow read:   if isStaff() || (isTech() && resource.data.techId == myTechId());
+      // No receipt photo, no entry. The rule enforces it, not just the form.
+      allow create: if (isStaff() || (isTech() && request.resource.data.techId == myTechId()))
+                    && request.resource.data.receiptPhoto is string
+                    && request.resource.data.receiptPhoto.size() > 0;
+      allow update: if isStaff();
+      allow delete: if isOwner();
+    }
+
+    /* ---- parts ------------------------------------------------------------ */
+    match /parts/{partId} {
+      allow read:   if signedIn();
+      // Van stock moves when a technician consumes a part on a job.
+      allow update: if isStaff() || (
+                      isTech() &&
+                      request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['vehicleStock','quantityOnHand'])
+                    );
+      allow create, delete: if isStaff();
+    }
+
+    match /settings/{doc} {
+      allow read:  if signedIn();
+      allow write: if isOwner();      // rates and thresholds are the owner's
+    }
+  }
+}

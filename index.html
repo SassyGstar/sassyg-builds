@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gina's Builds — OGO Staff Portal & Tax Academy</title>
+<title>Gina's Builds</title>
 <style>
   :root{
     --ink:#0d3b45; --teal:#005A69; --gold:#c99a2e; --bg:#f4f8f9; --card:#ffffff;
@@ -25,7 +25,7 @@
   h1{font-size:clamp(28px,5vw,42px); letter-spacing:-.02em; line-height:1.15;}
   .hero p{margin-top:14px; font-size:17px; color:#3e5c63; line-height:1.55;}
   .cards{
-    display:grid; gap:24px; width:100%; max-width:860px;
+    display:grid; gap:24px; width:100%; max-width:1180px;
     grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
   }
   .card{
@@ -37,6 +37,9 @@
   }
   .card:hover{transform:translateY(-4px); box-shadow:0 16px 38px rgba(13,59,69,.14);}
   .card.gold{border-top-color:var(--gold);}
+  .card.steel{border-top-color:#1D6F8E;}
+  .card.steel ul li::before{color:#1D6F8E;}
+  .card.steel .btn{background:#1D6F8E;}
   .card .emoji{font-size:34px;}
   .card h2{font-size:22px; letter-spacing:-.01em;}
   .card p{color:#41626a; line-height:1.55; font-size:15px; flex:1;}
@@ -60,10 +63,11 @@
 <body>
   <div class="hero">
     <span class="badge">Built by Gina · OGO Financial Services</span>
-    <h1>Tools I built for a multi-office tax firm</h1>
-    <p>Two working web apps — a staff portal that runs day-to-day operations,
-       and a training academy that gets tax preparers season-ready.
-       Click either one to try it live.</p>
+    <h1>Tools I built for real businesses</h1>
+    <p>Working web apps, not mockups — a staff portal that runs day-to-day operations,
+       a training academy that gets tax preparers season-ready, and a field service
+       dashboard for a commercial laundry repair company.
+       Click any of them to try it live.</p>
   </div>
 
   <div class="cards">
@@ -94,10 +98,25 @@
       <a class="btn" href="ogo-tax-academy/">Open the Academy →</a>
       <p style="flex:0;font-size:12.5px;color:#8aa0a5;">No sign-up needed — just start learning</p>
     </div>
+
+    <div class="card steel">
+      <div class="emoji">🧺</div>
+      <h2>Laundry Service Dashboard</h2>
+      <p>Field service management for a commercial laundry repair business.</p>
+      <ul>
+        <li>Mobile job flow for technicians</li>
+        <li>Full service history per machine</li>
+        <li>Dispatch board &amp; invoicing queue</li>
+        <li>QuickBooks Online integration</li>
+        <li>Mileage, fuel &amp; fleet tracking</li>
+      </ul>
+      <a class="btn" href="laundry-repair-dashboard/">Open the Dashboard →</a>
+      <p style="flex:0;font-size:12.5px;color:#8aa0a5;">Demo data · pick any role to sign in</p>
+    </div>
   </div>
 
-  <p class="note">The Staff Portal shown here is a demo version: every person and
-     client in it is fictional sample data.</p>
+  <p class="note">These are demo versions: every person, client, machine and dollar
+     figure in them is fictional sample data.</p>
 
   <footer>Made with ❤️ in Florida · <a href="https://github.com/SassyGstar/sassyg-builds" style="color:inherit;">View the code on GitHub</a></footer>
 </body>

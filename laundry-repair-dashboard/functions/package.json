@@ -1,0 +1,16 @@
+{
+  "name": "laundry-dashboard-functions",
+  "description": "QuickBooks Online integration for the 24 Hour Laundry Equipment field service dashboard",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.1.0"
+  },
+  "private": true
+}
