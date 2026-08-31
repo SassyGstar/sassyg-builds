@@ -134,7 +134,11 @@ button,input,select,textarea{font:inherit}
 .person{padding:12px;border-radius:14px;border:1px solid var(--ln);background:#F7F9FA;display:flex;gap:8px;align-items:flex-start}
 .avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--navy);color:var(--gold);font-weight:800;flex:0 0 auto;font-size:12px}
 /* TABLES */
-.tbl-wrap{overflow:auto;-webkit-overflow-scrolling:touch}
+.tbl-wrap{overflow:auto;-webkit-overflow-scrolling:touch;min-width:0;max-width:100%}
+/* Grid and flex children refuse to shrink below their content unless told to.
+   Without this the 700px payroll table dragged the whole page sideways on a phone. */
+.card,.side,.sec,.grid>*{min-width:0}
+.layout>*{min-width:0}
 .table{width:100%;border-collapse:separate;border-spacing:0 6px;min-width:600px}
 .table th{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--mu);text-align:left;padding:0 10px 4px}
 .table td{background:#F7F9FA;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln);padding:10px;font-size:12px}
@@ -830,8 +834,28 @@ function fbSave(){
   if(!fbRef||fbLock)return;
   const data=clone(S);
   delete data.activeOffice;delete data.activeSection;delete data.adminMode;
+  /* Time clock punches are written on their own per-employee paths by
+     fbSavePunch, so they are left out here. Without this, one device
+     saving its copy of the record could wipe a punch another device had
+     just made. */
+  delete data.tc;
+  /* An emptied list must be sent as null so it is actually cleared;
+     update() would otherwise leave the old value in place. */
+  Object.keys(data).forEach(function(k){
+    var v=data[k];
+    if(v&&typeof v==='object'&&Object.keys(v).length===0)data[k]=null;
+  });
   data._ts=Date.now();
-  fbRef.set(data);
+  fbRef.update(data);
+}
+/* Writes only this one employee's punches, so two people clocking in at
+   the same moment on different devices cannot overwrite each other. */
+function fbSavePunch(k){
+  if(!fbRef||fbLock||!k)return;
+  var act=(S.tc&&S.tc.active&&S.tc.active[k])||null;
+  var ent=(S.tc&&S.tc.entries&&S.tc.entries[k])||null;
+  fbRef.child('tc/active/'+k).set(act);
+  fbRef.child('tc/entries/'+k).set(ent&&ent.length?ent:null);
 }
 function fbMerge(remote){
   if(!remote)return;
@@ -1058,7 +1082,7 @@ function handleClock(){
     delete S.tc.active[k];
     const coTime=new Date(now).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
     addLog(me.name+' clocked OUT at '+coTime+' \u2014 '+fhm(dur)+' logged.',me.office,me.name);
-    fbSave();
+    fbSavePunch(k);fbSave();
     stopSessionTimer();
     renderTC();
     toast('\u2705 Clocked out \u2014 '+fhm(dur)+' logged.');
@@ -1068,7 +1092,7 @@ function handleClock(){
     S.tc.active[k]=now;
     const ciTime=new Date(now).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
     addLog(me.name+' clocked IN at '+ciTime+'.',me.office,me.name);
-    fbSave();
+    fbSavePunch(k);fbSave();
     startSessionTimer();
     renderTC();
     toast('\u23F1 Clocked in at '+ciTime+'!');
@@ -1110,14 +1134,14 @@ function saveManualTC(empId){
     notes:tv('m-notes')
   });
   addLog('Manual entry added for '+(emp?emp.name:'employee')+' ('+date+').','All',CU?CU.name:'Admin');
-  fbSave();closeModal();renderTC();
+  fbSavePunch(k);fbSave();closeModal();renderTC();
   toast('\u2705 Time entry saved.');
 }
 function deletePunch(empKey,entryId){
   if(!confirm('Delete this time entry?'))return;
   if(S.tc&&S.tc.entries&&S.tc.entries[empKey]){
     S.tc.entries[empKey]=S.tc.entries[empKey].filter(function(e){return e.id!==entryId;});
-    fbSave();renderTC();
+    fbSavePunch(empKey);fbSave();renderTC();
     const empId=parseInt(empKey.replace('emp_',''));
     showPunchDetail(empId);
     toast('Entry deleted.');
@@ -1128,6 +1152,18 @@ function deletePunch(empKey,entryId){
 function buildUserList(){
   const sel=document.getElementById('loginUser');if(!sel)return;
   sel.innerHTML=S.employees.filter(function(e){return e.status!=='Inactive';}).map(function(e){return'<option>'+esc(e.name)+'</option>';}).join('');
+  sel.onchange=syncLoginOffice;
+  syncLoginOffice();
+}
+/* Point the office box at the office this person actually works in. It drives the
+   clock-in geofence, so leaving it on the default used to measure someone against
+   the wrong building and refuse their punch. It stays changeable for a day spent
+   at another office. */
+function syncLoginOffice(){
+  var sel=document.getElementById('loginUser'),off=document.getElementById('loginOffice');
+  if(!sel||!off)return;
+  var e=S.employees.find(function(x){return x.name===sel.value;});
+  if(e&&e.office)off.value=e.office;
 }
 function openLogin(){document.getElementById('loginShell').style.display='block';document.getElementById('appShell').style.display='none';buildUserList();}
 function enterPortal(){
@@ -1151,7 +1187,8 @@ function verifyAdmin(name){
 }
 function finishLogin(name){
   const role=getRole(name);
-  const office=(document.getElementById('loginOffice')||{}).value||'Orlando';
+  const me=S.employees.find(function(e){return e.name===name;});
+  const office=(document.getElementById('loginOffice')||{}).value||(me&&me.office)||'Orlando';
   CU={name,role,office};
   localStorage.setItem(USER_KEY,JSON.stringify(CU));
   S.activeOffice=role!=='Admin'?office:'All';S.adminMode=false;
