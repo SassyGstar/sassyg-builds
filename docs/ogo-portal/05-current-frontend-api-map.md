@@ -1,7 +1,8 @@
 # OGO Staff Portal — Current Frontend → Production API Action Map
 
 **Source baseline:** `OGO_Portal_Transition_Baseline.html` (SHA-256 `39f4472ebbbd709672a9ec8d9ebac83c637db72dfeb385781b6fb1fe1bcac3af`)  
-**Purpose:** eliminate generic Firebase saves by giving every mutating UI action one explicit server-owned destination.
+**Purpose:** eliminate generic Firebase saves by giving every mutating UI action one explicit server-owned destination.  
+**Workflow authority:** [`06-client-workflow-redesign.md`](06-client-workflow-redesign.md).
 
 ## Rules
 
@@ -11,6 +12,7 @@
 - Important writes use SQL transactions, audit records, and server timestamps.
 - Mutable records use `ETag` / `If-Match`; create/effect POSTs use `Idempotency-Key` where retries could duplicate consequences.
 - SignalR is sent **after commit** and causes other clients to refresh the affected record/read model.
+- Client Workflow is modeled as **ClientWorkItems**, not a single workflow stage on a client.
 
 ## Complete mapping
 
@@ -47,7 +49,7 @@
 | `deleteRequest` | Admin delete request | Requests API | Prefer `POST /api/v1/requests/{id}/cancel`; hard-delete only for invalid drafts |
 | `submitApproval` | Approve/deny request | Requests API | `POST /api/v1/requests/{id}/approve` or `/deny` |
 | `withdrawRequest` | Employee withdraw request | Requests API | `POST /api/v1/requests/{id}/withdraw` |
-| `saveClient` | Create/edit lightweight client | Clients API | `POST /api/v1/clients`; `PUT /api/v1/clients/{id}` |
+| `saveClient` | Create/edit lightweight client identity | Clients API | `POST /api/v1/clients`; `PUT /api/v1/clients/{id}` |
 | `deleteClient` | Delete client | Clients API | `POST /api/v1/clients/{id}/archive`; do not hard-delete historical client records |
 | `saveResource` | Save portal resource/file | Resources + Documents | `POST /api/v1/resources`; files use object-storage upload-url flow |
 | `deleteResource` | Delete portal resource | Resources API | `DELETE /api/v1/resources/{id}`; object deletion is server-authorized |
@@ -55,12 +57,12 @@
 | `savePhoto` | Save base64 photo | Photos + object storage | `POST /api/v1/documents/upload-url` then `POST /api/v1/photos` metadata |
 | `deletePhoto` | Delete photo | Photos API | `DELETE /api/v1/photos/{id}` |
 | `wfEnsure` | Create/migrate workflow object in browser | Removed from runtime | Migration runs once server-side; `GET /api/v1/workflow/dashboard` for read model |
-| `wfSaveClient` | Create/update detailed client workflow | Client Workflow API | `PUT /api/v1/clients/{id}/workflow` (`If-Match` required) |
-| `wfArchiveClient` | Archive workflow client | Clients API | `POST /api/v1/clients/{id}/archive` |
-| `wfSendHandoff` | Send handoff | Handoff API | `POST /api/v1/handoffs` (`Idempotency-Key` required) |
-| `wfRespondHandoff` | Accept/decline handoff | Handoff API | `POST /api/v1/handoffs/{id}/accept` or `/decline` (transactional) |
+| `wfSaveClient` | Create/update one detailed tax workflow record | Client Work Items API | New: `POST /api/v1/work-items`; existing: `PUT /api/v1/work-items/{id}` with `If-Match` |
+| `wfArchiveClient` | Archive one workflow record | Client Work Items API | `POST /api/v1/work-items/{id}/archive` |
+| `wfSendHandoff` | Send ownership offer for one workflow record | Handoff API | `POST /api/v1/handoffs` with `workItemId` (`Idempotency-Key` required) |
+| `wfRespondHandoff` | Accept/decline handoff | Handoff API | `POST /api/v1/handoffs/{id}/accept` or `/decline` (transactional; changes work-item owner only) |
 | `wfCancelHandoff` | Cancel pending handoff | Handoff API | `POST /api/v1/handoffs/{id}/cancel` |
-| `wfSaveContact` | Log client contact | Client Contacts API | `POST /api/v1/clients/{id}/contacts` |
+| `wfSaveContact` | Log completed client communication and update follow-up fields | Work Item Contact Log API | `POST /api/v1/work-items/{id}/contact-logs`; server updates `LastContactDate`, `NextAction`, `FollowUpDate`, `ClientUpdateSent` and optional communication method in one transaction |
 | `setRSVP` | Save event RSVP | Events API | `PUT /api/v1/events/{id}/rsvp` |
 | `saveSaturday` | Add tax-season work Saturday | Scheduling API | `POST /api/v1/work-saturdays` |
 | `removeSaturday` | Remove work Saturday | Scheduling API | `DELETE /api/v1/work-saturdays/{id}` |
@@ -82,8 +84,11 @@ The current browser builds almost every screen from one in-memory `S` object. Th
 | Directory | `GET /api/v1/employees?status=active` |
 | Time Clock | `GET /api/v1/timeclock/me`; managers: `GET /api/v1/timeclock/entries?...` |
 | Client Workflow overview | `GET /api/v1/workflow/dashboard?...` |
-| Workflow client list | `GET /api/v1/clients?...` |
-| Client detail | `GET /api/v1/clients/{id}` |
+| Workflow work-item list | `GET /api/v1/work-items?...` |
+| Work-item detail | `GET /api/v1/work-items/{id}` |
+| Client identity/detail | `GET /api/v1/clients/{id}` |
+| All work for a client | `GET /api/v1/clients/{id}/work-items` |
+| Work-item activity/history | `GET /api/v1/work-items/{id}/events`; `GET /api/v1/work-items/{id}/status-history` |
 | Handoffs | `GET /api/v1/handoffs?status=pending&scope=...` |
 | PTO | `GET /api/v1/pto/me`; managers: `GET /api/v1/pto?...` |
 | Requests | `GET /api/v1/requests?...` |
@@ -96,7 +101,12 @@ The current browser builds almost every screen from one in-memory `S` object. Th
 SignalR messages are invalidations/notifications, not authoritative records. Recommended events:
 
 - `client.updated`
-- `client.assignment.changed`
+- `workItem.created`
+- `workItem.updated`
+- `workItem.assignment.changed`
+- `workItem.preparationStatus.changed`
+- `workItem.irsStatus.changed`
+- `workItem.archived`
 - `handoff.created`
 - `handoff.updated`
 - `timeclock.updated`
@@ -112,7 +122,7 @@ Payloads should carry only `publicId`, `eventType`, `serverSequence`, and minima
 ## Highest-priority conversion order
 
 1. Authentication/session and employee identity.
-2. Client Workflow + handoffs (current largest multi-user collision surface).
+2. Client Work Items + work-item-scoped handoffs (current largest multi-user collision surface).
 3. Time Clock + pay-period locking.
 4. PTO and requests.
 5. Employees/roles/offices.
