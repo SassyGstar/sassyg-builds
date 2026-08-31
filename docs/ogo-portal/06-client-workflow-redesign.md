@@ -6,75 +6,44 @@
 
 ---
 
-## 1. The problem we are correcting
+## 1. Why the old model is wrong
 
-The production portal does **not** track one linear workflow stage. Each workflow row stores a tax work item with multiple independent dimensions at the same time:
+The production portal does not store one linear workflow stage. Each detailed workflow row carries parallel facts: client, tax year, return type, office, owner, reviewer, preparation status, IRS status, five milestones, communication method, IRS/refund dates, rejection code, last contact, next action, follow-up and notes.
 
-- tax year;
-- return type;
-- office;
-- assigned employee;
-- reviewer;
-- preparation status;
-- IRS status;
-- documents-complete milestone;
-- TaxSlayer-entered milestone;
-- numbers-reviewed milestone;
-- client-update-sent milestone;
-- authorization/consent milestone;
-- communication method;
-- submitted date;
-- accepted date;
-- rejected date;
-- rejection code;
-- pending date;
-- refund date;
-- last-contact date;
-- next action;
-- follow-up date;
-- notes;
-- created/updated metadata.
+Those facts can all be true at the same time. Therefore a single `WorkflowStageId` cannot be the source of truth.
 
-Those facts are not mutually exclusive. A return can be under review while documents are complete; it can be submitted while a follow-up is scheduled; IRS processing can be pending while the internal preparation track is already complete.
-
-Therefore **there is no single `WorkflowStageId` that can be the source of truth.**
-
----
-
-## 2. The object model we are locking
+The production object is a **tax work item**.
 
 ```text
 Client
-  └── ClientWorkItem  ← one actual tax matter / unit of work
+  └── ClientWorkItem
         ├── PreparationStatus
         ├── IrsStatus
         ├── milestones + dates
-        ├── WorkItemAssignments
-        │     ├── Owner
-        │     └── Reviewer
-        ├── WorkItemContacts / contact log
+        ├── WorkItemAssignments (Owner / Reviewer)
+        ├── WorkItemContactLogs
         ├── WorkItemPrepStatusHistory
         ├── WorkItemIrsStatusHistory
         ├── WorkItemEvents
-        └── ClientHandoffs  ← transfers this work item, not the whole client
+        └── ClientHandoffs
 ```
 
-Examples:
+Example:
 
 ```text
-Client: Johnson Household
-  Work item A: 2025 Individual Return
-  Work item B: 2024 Amended Return
-  Work item C: 2026 Extension
+Johnson Household
+  ├── 2025 Individual Return
+  ├── 2024 Amended Return
+  └── 2026 Extension
 ```
 
-Each can have a different owner, reviewer, status, follow-up date, and handoff history.
+Each work item can have a different owner, reviewer, statuses, follow-up date and handoff history.
 
 ---
 
-## 3. Lookup tables
+## 2. Lookup tables
 
-The two status tracks remain separate because they answer different questions.
+Preparation and IRS status are independent tracks.
 
 ```sql
 CREATE TABLE crm.ReturnTypes (
@@ -89,22 +58,22 @@ CREATE TABLE crm.ReturnTypes (
 
 CREATE TABLE crm.PreparationStatuses (
     PreparationStatusId int IDENTITY(1,1) NOT NULL,
-    Code         nvarchar(60) NOT NULL,
-    Name         nvarchar(100) NOT NULL,
-    SortOrder    int NOT NULL,
-    IsTerminal   bit NOT NULL CONSTRAINT DF_PrepStatus_Terminal DEFAULT 0,
-    IsActive     bit NOT NULL CONSTRAINT DF_PrepStatus_Active DEFAULT 1,
+    Code       nvarchar(60) NOT NULL,
+    Name       nvarchar(100) NOT NULL,
+    SortOrder  int NOT NULL,
+    IsTerminal bit NOT NULL CONSTRAINT DF_PrepStatus_Terminal DEFAULT 0,
+    IsActive   bit NOT NULL CONSTRAINT DF_PrepStatus_Active DEFAULT 1,
     CONSTRAINT PK_PreparationStatuses PRIMARY KEY CLUSTERED (PreparationStatusId),
     CONSTRAINT UX_PreparationStatuses_Code UNIQUE (Code)
 );
 
 CREATE TABLE crm.IrsStatuses (
     IrsStatusId int IDENTITY(1,1) NOT NULL,
-    Code        nvarchar(60) NOT NULL,
-    Name        nvarchar(100) NOT NULL,
-    SortOrder   int NOT NULL,
-    IsTerminal  bit NOT NULL CONSTRAINT DF_IrsStatus_Terminal DEFAULT 0,
-    IsActive    bit NOT NULL CONSTRAINT DF_IrsStatus_Active DEFAULT 1,
+    Code       nvarchar(60) NOT NULL,
+    Name       nvarchar(100) NOT NULL,
+    SortOrder  int NOT NULL,
+    IsTerminal bit NOT NULL CONSTRAINT DF_IrsStatus_Terminal DEFAULT 0,
+    IsActive   bit NOT NULL CONSTRAINT DF_IrsStatus_Active DEFAULT 1,
     CONSTRAINT PK_IrsStatuses PRIMARY KEY CLUSTERED (IrsStatusId),
     CONSTRAINT UX_IrsStatuses_Code UNIQUE (Code)
 );
@@ -120,81 +89,91 @@ CREATE TABLE crm.CommunicationMethods (
 );
 ```
 
-Seed values preserve the current portal exactly.
+Seed names preserve the current portal exactly. Codes are stable machine names independent of display text.
 
 ### Return types
 
-`Individual`, `Business`, `Amended Return`, `Prior-Year Return`, `ITIN Return`, `Extension`.
+| Code | Current display name |
+|---|---|
+| `Individual` | Individual |
+| `Business` | Business |
+| `AmendedReturn` | Amended Return |
+| `PriorYearReturn` | Prior-Year Return |
+| `ItinReturn` | ITIN Return |
+| `Extension` | Extension |
 
 ### Preparation statuses
 
-`New Client / Not Started`, `Intake in Progress`, `Missing Information`, `All Information Received`, `Entered into TaxSlayer`, `Under Preparer Review`, `Numbers Reviewed and Approved`, `Client Update Sent`, `Waiting for Client Authorization`, `Client Authorization Received`, `Ready to E-File`, `E-Filed`, `Paper Return Required`, `Return Completed - Balance Due`, `Closed or Archived`.
+`NewClient`, `IntakeInProgress`, `MissingInformation`, `AllInformationReceived`, `EnteredIntoTaxSlayer`, `UnderPreparerReview`, `NumbersReviewedApproved`, `ClientUpdateSent`, `WaitingClientAuthorization`, `ClientAuthorizationReceived`, `ReadyToEFile`, `EFiled`, `PaperReturnRequired`, `CompletedBalanceDue`, `ClosedArchived`.
+
+Their display names remain the current 15 portal labels.
 
 ### IRS statuses
 
-`Not Submitted`, `Submitted to IRS`, `IRS Accepted`, `IRS Rejected`, `Correction in Progress`, `Resubmitted to IRS`, `Pending IRS Processing`, `Additional IRS Action Required`, `Refund Approved`, `Refund Issued`, `Refund Held or Delayed`, `Refund Applied to Debt`, `Balance Due - No Refund`, `Paper Return Mailed`, `Return Closed`.
+`NotSubmitted`, `SubmittedToIrs`, `IrsAccepted`, `IrsRejected`, `CorrectionInProgress`, `ResubmittedToIrs`, `PendingIrsProcessing`, `AdditionalIrsActionRequired`, `RefundApproved`, `RefundIssued`, `RefundHeldDelayed`, `RefundAppliedToDebt`, `BalanceDueNoRefund`, `PaperReturnMailed`, `ReturnClosed`.
+
+Their display names remain the current 15 portal labels.
 
 ### Communication methods
 
-`In Person`, `Telephone`, `Email`, `Text Message`, `TaxDome`, `Virtual Appointment`.
+`InPerson`, `Telephone`, `Email`, `TextMessage`, `TaxDome`, `VirtualAppointment`.
 
 ---
 
-## 4. `crm.ClientWorkItems` — the new source of truth
+## 3. `crm.ClientWorkItems` — current state
 
-One row represents one current tax work item. It is temporal so SQL retains the complete before/after row automatically.
+One row is one current tax matter. It is temporal, so SQL preserves every prior version of the row.
 
 ```sql
 CREATE TABLE crm.ClientWorkItems (
-    ClientWorkItemId       int IDENTITY(1,1) NOT NULL,
-    PublicId               uniqueidentifier NOT NULL CONSTRAINT DF_WorkItem_PublicId DEFAULT NEWID(),
-    ClientId               int NOT NULL,
-    OfficeId               int NOT NULL,
-    TaxYear                smallint NOT NULL,
-    ReturnTypeId           int NOT NULL,
-    SequenceNo             smallint NOT NULL CONSTRAINT DF_WorkItem_Sequence DEFAULT 1,
+    ClientWorkItemId      int IDENTITY(1,1) NOT NULL,
+    PublicId              uniqueidentifier NOT NULL CONSTRAINT DF_WorkItem_PublicId DEFAULT NEWID(),
+    ClientId              int NOT NULL,
+    OfficeId              int NOT NULL,
+    TaxYear               smallint NOT NULL,
+    ReturnTypeId          int NOT NULL,
+    SequenceNo            smallint NOT NULL CONSTRAINT DF_WorkItem_Sequence DEFAULT 1,
 
-    PreparationStatusId    int NOT NULL,
-    IrsStatusId            int NOT NULL,
-    CommunicationMethodId  int NULL,
+    PreparationStatusId   int NOT NULL,
+    IrsStatusId           int NOT NULL,
+    CommunicationMethodId int NULL,
 
-    DocsComplete           bit NOT NULL CONSTRAINT DF_WorkItem_Docs DEFAULT 0,
-    TaxSlayerEntered       bit NOT NULL CONSTRAINT DF_WorkItem_TaxSlayer DEFAULT 0,
-    NumbersReviewed        bit NOT NULL CONSTRAINT DF_WorkItem_Reviewed DEFAULT 0,
-    ClientUpdateSent       bit NOT NULL CONSTRAINT DF_WorkItem_UpdateSent DEFAULT 0,
-    ConsentReceived        bit NOT NULL CONSTRAINT DF_WorkItem_Consent DEFAULT 0,
+    DocsComplete          bit NOT NULL CONSTRAINT DF_WorkItem_Docs DEFAULT 0,
+    TaxSlayerEntered      bit NOT NULL CONSTRAINT DF_WorkItem_TaxSlayer DEFAULT 0,
+    NumbersReviewed       bit NOT NULL CONSTRAINT DF_WorkItem_Reviewed DEFAULT 0,
+    ClientUpdateSent      bit NOT NULL CONSTRAINT DF_WorkItem_UpdateSent DEFAULT 0,
+    ConsentReceived       bit NOT NULL CONSTRAINT DF_WorkItem_Consent DEFAULT 0,
 
-    SubmittedDate          date NULL,
-    AcceptedDate           date NULL,
-    RejectedDate           date NULL,
-    RejectionCode          nvarchar(80) NULL,
-    PendingDate            date NULL,
-    RefundDate             date NULL,
-    LastContactDate        date NULL,
-    FollowUpDate           date NULL,
+    SubmittedDate         date NULL,
+    AcceptedDate          date NULL,
+    RejectedDate          date NULL,
+    RejectionCode         nvarchar(80) NULL,
+    PendingDate           date NULL,
+    RefundDate            date NULL,
+    LastContactDate       date NULL,
+    FollowUpDate          date NULL,
 
-    NextAction             nvarchar(1000) NULL,
-    Notes                  nvarchar(max) NULL,
+    NextAction            nvarchar(1000) NULL,
+    Notes                 nvarchar(max) NULL,
 
-    IsArchived             bit NOT NULL CONSTRAINT DF_WorkItem_Archived DEFAULT 0,
-    ArchivedAtUtc          datetime2(3) NULL,
-    ArchivedByEmployeeId   int NULL,
+    IsArchived            bit NOT NULL CONSTRAINT DF_WorkItem_Archived DEFAULT 0,
+    ArchivedAtUtc         datetime2(3) NULL,
+    ArchivedByEmployeeId  int NULL,
 
-    LegacyWorkflowId       bigint NULL,  -- transition-baseline clientWorkflow.clients[].id
-    CreatedAtUtc           datetime2(3) NOT NULL CONSTRAINT DF_WorkItem_Created DEFAULT SYSUTCDATETIME(),
-    CreatedByEmployeeId    int NULL,
-    UpdatedAtUtc           datetime2(3) NOT NULL CONSTRAINT DF_WorkItem_Updated DEFAULT SYSUTCDATETIME(),
-    UpdatedByEmployeeId    int NULL,
-    RowVersion             rowversion NOT NULL,
+    LegacyWorkflowId      bigint NULL,
+    CreatedAtUtc          datetime2(3) NOT NULL CONSTRAINT DF_WorkItem_Created DEFAULT SYSUTCDATETIME(),
+    CreatedByEmployeeId   int NULL,
+    UpdatedAtUtc          datetime2(3) NOT NULL CONSTRAINT DF_WorkItem_Updated DEFAULT SYSUTCDATETIME(),
+    UpdatedByEmployeeId   int NULL,
+    RowVersion            rowversion NOT NULL,
 
-    ValidFrom              datetime2(3) GENERATED ALWAYS AS ROW START HIDDEN NOT NULL,
-    ValidTo                datetime2(3) GENERATED ALWAYS AS ROW END HIDDEN NOT NULL,
+    ValidFrom datetime2(3) GENERATED ALWAYS AS ROW START HIDDEN NOT NULL,
+    ValidTo   datetime2(3) GENERATED ALWAYS AS ROW END HIDDEN NOT NULL,
     PERIOD FOR SYSTEM_TIME (ValidFrom, ValidTo),
 
     CONSTRAINT PK_ClientWorkItems PRIMARY KEY CLUSTERED (ClientWorkItemId),
     CONSTRAINT UX_ClientWorkItems_PublicId UNIQUE (PublicId),
     CONSTRAINT UX_ClientWorkItems_Identity UNIQUE (ClientId, TaxYear, ReturnTypeId, SequenceNo),
-    CONSTRAINT UX_ClientWorkItems_Legacy UNIQUE (LegacyWorkflowId),
 
     CONSTRAINT FK_WorkItem_Client FOREIGN KEY (ClientId) REFERENCES crm.Clients(ClientId),
     CONSTRAINT FK_WorkItem_Office FOREIGN KEY (OfficeId) REFERENCES org.Offices(OfficeId),
@@ -211,6 +190,11 @@ CREATE TABLE crm.ClientWorkItems (
         OR (IsArchived = 1 AND ArchivedAtUtc IS NOT NULL))
 ) WITH (SYSTEM_VERSIONING = ON (HISTORY_TABLE = crm.ClientWorkItemsHistory));
 
+-- SQL Server unique indexes allow only one NULL, so legacy identity MUST be filtered.
+CREATE UNIQUE INDEX UX_ClientWorkItems_Legacy
+    ON crm.ClientWorkItems(LegacyWorkflowId)
+    WHERE LegacyWorkflowId IS NOT NULL;
+
 CREATE INDEX IX_WorkItems_Office_Prep
     ON crm.ClientWorkItems(OfficeId, PreparationStatusId, IsArchived)
     INCLUDE (ClientId, TaxYear, ReturnTypeId, FollowUpDate, UpdatedAtUtc);
@@ -225,29 +209,29 @@ CREATE INDEX IX_WorkItems_FollowUp
     WHERE FollowUpDate IS NOT NULL;
 ```
 
-### Why `SequenceNo` exists
+`SequenceNo` keeps the schema from forbidding a second amendment or similar repeat matter in the same year.
 
-OGO may eventually need more than one matter with the same client, year, and broad return type—for example a second amendment. We do not make that future record impossible with an overly strict unique key.
+Employee FKs on `ArchivedByEmployeeId`, `CreatedByEmployeeId`, and `UpdatedByEmployeeId` are added in the final dependency-order migration step, consistent with the main database blueprint’s circular-FK convention.
 
 ---
 
-## 5. Owner and reviewer are assignments, not text fields
+## 4. Owner and reviewer are assignment ledgers
 
-The production portal currently stores `assignedTo` and `reviewer` by employee name. SQL uses employee foreign keys and keeps assignment history.
+The current portal stores employee names. Production stores employee IDs and retains history.
 
 ```sql
 CREATE TABLE crm.WorkItemAssignments (
-    WorkItemAssignmentId   int IDENTITY(1,1) NOT NULL,
-    ClientWorkItemId       int NOT NULL,
-    EmployeeId             int NOT NULL,
-    AssignmentRole         tinyint NOT NULL, -- 1=Owner 2=Reviewer
-    StartedAtUtc           datetime2(3) NOT NULL CONSTRAINT DF_WorkItemAsg_Start DEFAULT SYSUTCDATETIME(),
-    StartedByEmployeeId    int NOT NULL,
-    StartReason            tinyint NOT NULL, -- 1=Initial 2=Handoff 3=ManagerAssign 4=ReviewerAssign
-    EndedAtUtc             datetime2(3) NULL,
-    EndedByEmployeeId      int NULL,
-    EndReason              tinyint NULL,
-    SourceHandoffId        int NULL,
+    WorkItemAssignmentId int IDENTITY(1,1) NOT NULL,
+    ClientWorkItemId     int NOT NULL,
+    EmployeeId           int NOT NULL,
+    AssignmentRole       tinyint NOT NULL, -- 1=Owner 2=Reviewer
+    StartedAtUtc         datetime2(3) NOT NULL CONSTRAINT DF_WorkItemAsg_Start DEFAULT SYSUTCDATETIME(),
+    StartedByEmployeeId  int NOT NULL,
+    StartReason          tinyint NOT NULL, -- 1=Initial 2=Handoff 3=ManagerAssign 4=ReviewerAssign
+    EndedAtUtc           datetime2(3) NULL,
+    EndedByEmployeeId    int NULL,
+    EndReason            tinyint NULL,
+    SourceHandoffId      int NULL,
     CONSTRAINT PK_WorkItemAssignments PRIMARY KEY CLUSTERED (WorkItemAssignmentId),
     CONSTRAINT FK_WorkItemAsg_WorkItem FOREIGN KEY (ClientWorkItemId) REFERENCES crm.ClientWorkItems(ClientWorkItemId),
     CONSTRAINT FK_WorkItemAsg_Employee FOREIGN KEY (EmployeeId) REFERENCES hr.Employees(EmployeeId),
@@ -266,7 +250,7 @@ CREATE INDEX IX_WorkItemAssignments_EmployeeActive
     INCLUDE (ClientWorkItemId, StartedAtUtc);
 ```
 
-The current owner view becomes:
+`SourceHandoffId` receives its FK after `ClientHandoffs` exists.
 
 ```sql
 CREATE VIEW crm.vCurrentWorkItemOwner AS
@@ -278,25 +262,55 @@ FROM crm.WorkItemAssignments a
 WHERE a.AssignmentRole = 1 AND a.EndedAtUtc IS NULL;
 ```
 
-A client can therefore have several open work items owned by different employees without corrupting client-level identity.
+---
+
+## 5. Client contact/activity log
+
+`wfSaveContact()` is not a contact-address book entry. It records a completed interaction, method, summary and follow-up, and weekly reporting counts those interactions. It gets a normalized table.
+
+```sql
+CREATE TABLE crm.WorkItemContactLogs (
+    WorkItemContactLogId bigint IDENTITY(1,1) NOT NULL,
+    ClientWorkItemId     int NOT NULL,
+    ContactDate          date NOT NULL,
+    OccurredAtUtc        datetime2(3) NOT NULL CONSTRAINT DF_WorkItemContact_At DEFAULT SYSUTCDATETIME(),
+    EmployeeId           int NOT NULL,
+    OfficeId             int NOT NULL,
+    CommunicationMethodId int NULL,
+    Summary              nvarchar(2000) NOT NULL,
+    NextAction           nvarchar(1000) NULL,
+    FollowUpDate         date NULL,
+    CONSTRAINT PK_WorkItemContactLogs PRIMARY KEY CLUSTERED (WorkItemContactLogId),
+    CONSTRAINT FK_WorkItemContact_WorkItem FOREIGN KEY (ClientWorkItemId) REFERENCES crm.ClientWorkItems(ClientWorkItemId),
+    CONSTRAINT FK_WorkItemContact_Employee FOREIGN KEY (EmployeeId) REFERENCES hr.Employees(EmployeeId),
+    CONSTRAINT FK_WorkItemContact_Office FOREIGN KEY (OfficeId) REFERENCES org.Offices(OfficeId),
+    CONSTRAINT FK_WorkItemContact_Method FOREIGN KEY (CommunicationMethodId) REFERENCES crm.CommunicationMethods(CommunicationMethodId)
+);
+
+CREATE INDEX IX_WorkItemContactLogs_WorkItem
+    ON crm.WorkItemContactLogs(ClientWorkItemId, ContactDate DESC, OccurredAtUtc DESC);
+CREATE INDEX IX_WorkItemContactLogs_Weekly
+    ON crm.WorkItemContactLogs(ContactDate, OfficeId, EmployeeId)
+    INCLUDE (ClientWorkItemId, CommunicationMethodId);
+```
+
+`POST /work-items/{id}/contact-logs` inserts this row and, in the same transaction, updates the work item’s `LastContactDate`, `NextAction`, `FollowUpDate`, `ClientUpdateSent`, and optional current communication method.
 
 ---
 
-## 6. Status history is two tracks, not one stage history
-
-We retain explicit queryable ledgers for status transitions while the temporal work-item table preserves full row snapshots.
+## 6. Preparation and IRS history are separate ledgers
 
 ```sql
 CREATE TABLE crm.WorkItemPrepStatusHistory (
     WorkItemPrepStatusHistoryId bigint IDENTITY(1,1) NOT NULL,
-    ClientWorkItemId       int NOT NULL,
+    ClientWorkItemId int NOT NULL,
     FromPreparationStatusId int NULL,
     ToPreparationStatusId   int NOT NULL,
-    ChangedAtUtc           datetime2(3) NOT NULL CONSTRAINT DF_WiPrepHist_Changed DEFAULT SYSUTCDATETIME(),
-    ChangedByEmployeeId    int NOT NULL,
-    Reason                 nvarchar(500) NULL,
+    ChangedAtUtc datetime2(3) NOT NULL CONSTRAINT DF_WiPrepHist_Changed DEFAULT SYSUTCDATETIME(),
+    ChangedByEmployeeId int NOT NULL,
+    Reason nvarchar(500) NULL,
     DurationInPreviousStatusMinutes int NULL,
-    CorrelationId          uniqueidentifier NULL,
+    CorrelationId uniqueidentifier NULL,
     CONSTRAINT PK_WorkItemPrepStatusHistory PRIMARY KEY CLUSTERED (WorkItemPrepStatusHistoryId),
     CONSTRAINT FK_WiPrepHist_WorkItem FOREIGN KEY (ClientWorkItemId) REFERENCES crm.ClientWorkItems(ClientWorkItemId),
     CONSTRAINT FK_WiPrepHist_From FOREIGN KEY (FromPreparationStatusId) REFERENCES crm.PreparationStatuses(PreparationStatusId),
@@ -305,14 +319,14 @@ CREATE TABLE crm.WorkItemPrepStatusHistory (
 
 CREATE TABLE crm.WorkItemIrsStatusHistory (
     WorkItemIrsStatusHistoryId bigint IDENTITY(1,1) NOT NULL,
-    ClientWorkItemId  int NOT NULL,
-    FromIrsStatusId   int NULL,
-    ToIrsStatusId     int NOT NULL,
-    ChangedAtUtc      datetime2(3) NOT NULL CONSTRAINT DF_WiIrsHist_Changed DEFAULT SYSUTCDATETIME(),
+    ClientWorkItemId int NOT NULL,
+    FromIrsStatusId int NULL,
+    ToIrsStatusId   int NOT NULL,
+    ChangedAtUtc datetime2(3) NOT NULL CONSTRAINT DF_WiIrsHist_Changed DEFAULT SYSUTCDATETIME(),
     ChangedByEmployeeId int NOT NULL,
-    Reason            nvarchar(500) NULL,
+    Reason nvarchar(500) NULL,
     DurationInPreviousStatusMinutes int NULL,
-    CorrelationId     uniqueidentifier NULL,
+    CorrelationId uniqueidentifier NULL,
     CONSTRAINT PK_WorkItemIrsStatusHistory PRIMARY KEY CLUSTERED (WorkItemIrsStatusHistoryId),
     CONSTRAINT FK_WiIrsHist_WorkItem FOREIGN KEY (ClientWorkItemId) REFERENCES crm.ClientWorkItems(ClientWorkItemId),
     CONSTRAINT FK_WiIrsHist_From FOREIGN KEY (FromIrsStatusId) REFERENCES crm.IrsStatuses(IrsStatusId),
@@ -320,29 +334,24 @@ CREATE TABLE crm.WorkItemIrsStatusHistory (
 );
 ```
 
-This supports clean questions such as:
-
-- average days in `Missing Information`;
-- average time from `Submitted to IRS` to `IRS Accepted`;
-- returns rejected more than once;
-- work items pending IRS processing for 30+ days.
+This supports separate metrics such as time in `Missing Information` and time from `Submitted to IRS` to `IRS Accepted`.
 
 ---
 
-## 7. Business event/history stream
+## 7. Business event stream
 
-The current `clientWorkflow.activities` and `clientWorkflow.audit` arrays become server-owned events instead of browser arrays.
+Temporal history answers what the row looked like. `AuditLog` answers who called the API and from where. `WorkItemEvents` is the human-readable business narrative.
 
 ```sql
 CREATE TABLE crm.WorkItemEvents (
-    WorkItemEventId   bigint IDENTITY(1,1) NOT NULL,
-    ClientWorkItemId  int NOT NULL,
-    EventType         nvarchar(60) NOT NULL,
-    ActorEmployeeId   int NULL, -- NULL = system/migration
-    OccurredAtUtc     datetime2(3) NOT NULL CONSTRAINT DF_WorkItemEvent_At DEFAULT SYSUTCDATETIME(),
-    Summary           nvarchar(1000) NOT NULL,
-    DetailJson        nvarchar(max) NULL,
-    CorrelationId     uniqueidentifier NULL,
+    WorkItemEventId  bigint IDENTITY(1,1) NOT NULL,
+    ClientWorkItemId int NOT NULL,
+    EventType        nvarchar(60) NOT NULL,
+    ActorEmployeeId  int NULL,
+    OccurredAtUtc    datetime2(3) NOT NULL CONSTRAINT DF_WorkItemEvent_At DEFAULT SYSUTCDATETIME(),
+    Summary          nvarchar(1000) NOT NULL,
+    DetailJson       nvarchar(max) NULL,
+    CorrelationId    uniqueidentifier NULL,
     CONSTRAINT PK_WorkItemEvents PRIMARY KEY CLUSTERED (WorkItemEventId),
     CONSTRAINT FK_WorkItemEvent_WorkItem FOREIGN KEY (ClientWorkItemId) REFERENCES crm.ClientWorkItems(ClientWorkItemId),
     CONSTRAINT CK_WorkItemEvent_Json CHECK (DetailJson IS NULL OR ISJSON(DetailJson)=1)
@@ -354,22 +363,11 @@ CREATE INDEX IX_WorkItemEvents_WorkItem
 
 Typical events: `Created`, `Updated`, `PreparationStatusChanged`, `IrsStatusChanged`, `ContactLogged`, `HandoffSent`, `HandoffAccepted`, `HandoffDeclined`, `Archived`, `FollowUpChanged`.
 
-`audit.AuditLog` still records request-level identity/IP/correlation. `WorkItemEvents` is the business-facing narrative.
-
 ---
 
-## 8. Handoffs now target a work item
+## 8. Handoffs target one work item
 
-A handoff means “take over this return/matter,” not “take ownership of every piece of work for this client.”
-
-The corrected handoff identity is:
-
-```sql
-ALTER TABLE crm.ClientHandoffs
-    ADD ClientWorkItemId int NULL;
-```
-
-For the actual Phase 1 migration we create the table correctly from the start rather than applying this ALTER. The authoritative shape is:
+A handoff means “take over this return/matter,” not “take every piece of work belonging to this client.”
 
 ```sql
 CREATE TABLE crm.ClientHandoffs (
@@ -379,6 +377,7 @@ CREATE TABLE crm.ClientHandoffs (
     FromEmployeeId  int NOT NULL,
     ToEmployeeId    int NOT NULL,
     HandoffStatus   tinyint NOT NULL CONSTRAINT DF_Handoff_Status DEFAULT 0,
+        -- 0=Pending 1=Accepted 2=Declined 3=Cancelled 4=Expired 5=Superseded
     Message         nvarchar(1000) NULL,
     InitiatedAtUtc  datetime2(3) NOT NULL CONSTRAINT DF_Handoff_Init DEFAULT SYSUTCDATETIME(),
     InitiatedByEmployeeId int NOT NULL,
@@ -393,7 +392,10 @@ CREATE TABLE crm.ClientHandoffs (
     CONSTRAINT FK_Handoff_From FOREIGN KEY (FromEmployeeId) REFERENCES hr.Employees(EmployeeId),
     CONSTRAINT FK_Handoff_To FOREIGN KEY (ToEmployeeId) REFERENCES hr.Employees(EmployeeId),
     CONSTRAINT CK_Handoff_Status CHECK (HandoffStatus IN (0,1,2,3,4,5)),
-    CONSTRAINT CK_Handoff_NotSelf CHECK (FromEmployeeId <> ToEmployeeId)
+    CONSTRAINT CK_Handoff_NotSelf CHECK (FromEmployeeId <> ToEmployeeId),
+    CONSTRAINT CK_Handoff_Response CHECK (
+        (HandoffStatus = 0 AND RespondedAtUtc IS NULL)
+        OR (HandoffStatus <> 0 AND RespondedAtUtc IS NOT NULL))
 );
 
 CREATE UNIQUE INDEX UX_ClientHandoffs_OnePending
@@ -401,32 +403,30 @@ CREATE UNIQUE INDEX UX_ClientHandoffs_OnePending
     WHERE HandoffStatus = 0;
 ```
 
-The accept transaction locks the pending handoff and the active **Owner assignment for that `ClientWorkItemId`**, closes it, then inserts the recipient owner assignment. `UX_WorkItemAssignments_OneActiveRole` guarantees two owners cannot exist.
+`SourceAssignmentId` receives its FK after both tables exist.
+
+The accept transaction locks the pending handoff and the active Owner assignment for that `ClientWorkItemId`, closes it, inserts the recipient Owner assignment, appends event/audit rows, then commits. `UX_WorkItemAssignments_OneActiveRole` makes two active owners physically impossible.
 
 ---
 
 ## 9. Server validation rules preserving current behavior
 
-These rules move out of JavaScript and into the application/database boundary.
-
 1. `Refund Issued` requires `RefundDate`.
 2. `IRS Rejected` requires `RejectionCode`.
 3. `SubmittedDate` requires `ConsentReceived = true`.
 4. Archived work items cannot initiate a handoff.
-5. Normal staff cannot directly replace the active owner; they must use a handoff.
-6. Only the intended recipient can accept/decline a pending handoff unless an explicit administrative force-reassign permission is used.
-7. A client work item can have at most one pending handoff.
-8. A client work item can have at most one active Owner and one active Reviewer.
+5. Normal staff cannot directly replace the active Owner; they must use handoff.
+6. Only the intended recipient can accept/decline a pending handoff unless an explicit force-reassign permission is used.
+7. One work item can have at most one pending handoff.
+8. One work item can have at most one active Owner and one active Reviewer.
 
-We deliberately do **not** add overly aggressive checks such as “IRS Accepted requires the current preparation status to equal E-Filed.” Historical dates and current status can legitimately diverge, and the imported data must remain representable.
+We do not add aggressive cross-track checks that would make legitimate historical combinations unrepresentable.
 
 ---
 
-## 10. No persisted single headline stage
+## 10. Headline status is derived only
 
-The portal may still want one colored headline/badge for a dashboard. That is a read-model concern, not stored truth.
-
-Example view:
+If the UI wants one badge, derive it in a view/read model. Never persist it as competing truth.
 
 ```sql
 CREATE VIEW crm.vClientWorkItemSummary AS
@@ -454,13 +454,11 @@ JOIN crm.PreparationStatuses ps ON ps.PreparationStatusId = w.PreparationStatusI
 JOIN crm.IrsStatuses irs ON irs.IrsStatusId = w.IrsStatusId;
 ```
 
-The exact display priority can change without migrating stored workflow data.
+Display priority can change without migrating business data.
 
 ---
 
-## 11. API contract changes
-
-The API works with `work-items`, not a fake workflow property on `clients`.
+## 11. API contract
 
 ### Reads
 
@@ -469,6 +467,7 @@ GET /api/v1/work-items
 GET /api/v1/work-items/{workItemId}
 GET /api/v1/clients/{clientId}/work-items
 GET /api/v1/workflow/dashboard
+GET /api/v1/work-items/{workItemId}/contact-logs
 GET /api/v1/work-items/{workItemId}/events
 GET /api/v1/work-items/{workItemId}/status-history
 ```
@@ -477,26 +476,22 @@ GET /api/v1/work-items/{workItemId}/status-history
 
 ```text
 POST /api/v1/work-items
-PUT  /api/v1/work-items/{workItemId}           If-Match required
+PUT  /api/v1/work-items/{workItemId}              If-Match required
 POST /api/v1/work-items/{workItemId}/archive
-POST /api/v1/work-items/{workItemId}/contacts
-POST /api/v1/handoffs                          body contains workItemId
+POST /api/v1/work-items/{workItemId}/contact-logs
+POST /api/v1/handoffs                             body contains workItemId
 POST /api/v1/handoffs/{handoffId}/accept
 POST /api/v1/handoffs/{handoffId}/decline
 POST /api/v1/handoffs/{handoffId}/cancel
 ```
 
-A record-level `PUT` is acceptable here: it updates **one work item**, not the whole portal. The server compares old/new statuses inside the transaction and appends the appropriate prep/IRS history rows and business events.
+A record-level `PUT` is safe here because it updates one work item, not the entire portal. The server compares old/new values and appends prep/IRS history plus business events inside the same transaction.
 
-### Concurrency
-
-`GET /work-items/{id}` returns an ETag from `RowVersion`. `PUT` must send `If-Match`. A stale browser receives `412 Precondition Failed` and cannot overwrite a coworker’s more recent edit.
+`GET /work-items/{id}` returns an ETag from `RowVersion`; stale `If-Match` writes receive `412 Precondition Failed`.
 
 ---
 
-## 12. SignalR vocabulary changes
-
-Recommended events:
+## 12. SignalR vocabulary
 
 ```text
 workItem.created
@@ -504,19 +499,20 @@ workItem.updated
 workItem.assignment.changed
 workItem.preparationStatus.changed
 workItem.irsStatus.changed
+workItem.contact.logged
 workItem.archived
 handoff.created
 handoff.updated
 notification.created
 ```
 
-SignalR sends only identity/version/minimal display metadata. The receiving browser GETs the authoritative work item.
+Events are invalidations, not authoritative records. Receivers GET the changed resource after notification.
 
 ---
 
 ## 13. Migration from the transition baseline
 
-Each `S.clientWorkflow.clients[]` object becomes one `crm.ClientWorkItems` row plus assignments.
+Each `S.clientWorkflow.clients[]` object becomes one `crm.ClientWorkItems` row plus Owner/Reviewer assignment rows.
 
 | Current field | SQL destination |
 |---|---|
@@ -526,8 +522,8 @@ Each `S.clientWorkflow.clients[]` object becomes one `crm.ClientWorkItems` row p
 | `taxYear` | `ClientWorkItems.TaxYear` |
 | `returnType` | `ReturnTypes` → `ReturnTypeId` |
 | `office` | `Offices` → `OfficeId` |
-| `assignedTo` | active `WorkItemAssignments` row, role Owner |
-| `reviewer` | active `WorkItemAssignments` row, role Reviewer |
+| `assignedTo` | active `WorkItemAssignments` Owner |
+| `reviewer` | active `WorkItemAssignments` Reviewer |
 | `prepStatus` | `PreparationStatuses` → `PreparationStatusId` |
 | `irsStatus` | `IrsStatuses` → `IrsStatusId` |
 | `docsComplete` | `DocsComplete` |
@@ -546,38 +542,41 @@ Each `S.clientWorkflow.clients[]` object becomes one `crm.ClientWorkItems` row p
 | `nextAction` | `NextAction` |
 | `followUpDate` | `FollowUpDate` |
 | `notes` | `Notes` |
-| `createdAt` | `CreatedAtUtc` after timestamp normalization |
-| `updatedAt` / `updatedBy` | `UpdatedAtUtc` / resolved `UpdatedByEmployeeId`; preserve unresolved actor in migration event detail |
+| `createdAt` | normalized `CreatedAtUtc` |
+| `updatedAt` / `updatedBy` | normalized `UpdatedAtUtc` / resolved employee; unresolved actor preserved in migration event detail |
+
+### Contact activity
+
+Each `clientWorkflow.activities[]` row maps to `WorkItemContactLogs` by resolving `clientRecordId` through `ClientWorkItems.LegacyWorkflowId`.
 
 ### Handoffs
 
-`clientWorkflow.handoffs[].clientRecordId` points to the workflow-record ID, not a durable SQL client identity. Migration resolves it through `ClientWorkItems.LegacyWorkflowId` and writes `ClientHandoffs.ClientWorkItemId`.
-
-That is the critical mapping that preserves the actual handoff target.
+Each `clientWorkflow.handoffs[].clientRecordId` also resolves through `LegacyWorkflowId`, then writes `ClientHandoffs.ClientWorkItemId`. This preserves the exact matter that was handed off.
 
 ---
 
-## 14. Migration reconciliation gates
+## 14. Reconciliation gates
 
-Before cutover, the staging import must prove:
+Before cutover, staging must prove:
 
-- every non-archived workflow object became exactly one work item;
-- every legacy workflow ID is unique after import;
-- every owner/reviewer name either resolved to an employee or appears on an explicit unresolved-mapping report;
+- every detailed workflow object became exactly one work item;
+- every non-null legacy workflow ID is unique;
+- every owner/reviewer either resolved to an employee or appears on an explicit unresolved-mapping report;
+- every contact activity resolves to a work item;
 - every handoff resolves to a work item;
-- pending handoffs still point to the same intended recipient;
-- accepted handoffs agree with the imported current Owner assignment;
-- every prep/IRS status value maps to a seeded lookup value;
-- dates and milestone booleans match the source;
-- no import silently invents consent, IRS acceptance, or refund dates.
+- pending handoffs keep the same intended recipient;
+- accepted handoffs agree with the imported active Owner assignment;
+- every prep/IRS/return-type/communication value maps to a seeded lookup;
+- dates and milestones match source values;
+- no migration invents consent, IRS acceptance, rejection or refund facts.
 
-The migration fails closed if any handoff cannot resolve its work item.
+The migration fails closed if a handoff cannot resolve its work item.
 
 ---
 
 ## 15. Phase 5 implementation gate
 
-Phase 5 may begin only when the generated EF Core model reflects this document:
+Phase 5 may begin only when the EF Core model contains:
 
 ```text
 Clients
@@ -587,12 +586,13 @@ PreparationStatuses
 IrsStatuses
 CommunicationMethods
 WorkItemAssignments
+WorkItemContactLogs
 WorkItemPrepStatusHistory
 WorkItemIrsStatusHistory
 WorkItemEvents
 ClientHandoffs -> ClientWorkItemId
 ```
 
-The old `WorkflowStages` + one-row `ClientWorkflowStatus(WorkflowStageId)` model must **not** be scaffolded into production code.
+The old `WorkflowStages` + `ClientWorkflowStatus(WorkflowStageId)` model must **not** be scaffolded into production code.
 
-This resolves the workflow-model blocker identified during the baseline comparison.
+This resolves the workflow-model blocker found during the baseline comparison.
