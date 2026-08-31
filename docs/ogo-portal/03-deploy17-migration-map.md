@@ -271,17 +271,17 @@ that makes the three documents verifiably consistent: no table may be absent fro
 | `hr.EmployeeRoles` | `ROLES` constant + `offices[].manager` | ~8 |
 | `hr.EmployeePermissionOverrides` | **New capability** | 0 |
 | `hr.PtoPolicies` / `PtoPolicyTiers` | `getPTOInfo()` rules, transcribed | 2 policies |
-| `hr.PtoTransactions` | Computed from policy + approved requests (§4.5) | 2 per employee + uses |
+| `hr.PtoTransactions` | ✅ **Real ledger exists:** `ptoAddEntry`/`ptoRemoveEntry`/`savePTOAdjust`/`ptoClearOverride`, plus policy grants | As recorded |
 | `hr.EmployeeRequests` | `requests[]` | As exported |
 | `crm.Clients` | `clients[]` | As exported |
-| `crm.ClientContacts` | **No source.** Deploy 17 has no contacts | 0 |
+| `crm.ClientContacts` | ✅ **Source exists:** `wfSaveContact` → `clientWorkflow.activities` | As logged |
 | `crm.ClientNotes` | `clients[].notes` (one row each) | 1 per client with notes |
-| `crm.ClientAssignments` | `clients[].owner` — one row per client, `StartReason=Migration` | 1 per client |
+| `crm.ClientAssignments` | `clientWorkflow.clients[].assignedTo` **plus a partial back-fill from accepted handoffs** (each gives from → to → `respondedAt`) | 1 per client + 1 per accepted handoff |
 | `crm.WorkflowStages` | **Seeded** (§4.4) | 0 migrated |
 | `crm.ClientWorkflowStatus` | `clients[].stage` | 1 per client |
-| `crm.ClientWorkflowHistory` | **No source.** No stage history exists | 0 |
-| `crm.ClientHandoffs` | **No source — feature does not exist (§5)** | **0** |
-| `crm.HandoffEvents` | **No source (§5)** | **0** |
+| `crm.ClientWorkflowHistory` | ✅ **Source exists:** `clientWorkflow.activities` + `clientWorkflow.audit` (`wfAudit`) | As logged |
+| `crm.ClientHandoffs` | ✅ **`clientWorkflow.handoffs`** — full lifecycle (`wfSendHandoff`/`wfRespondHandoff`/`wfCancelHandoff`) | As exported |
+| `crm.HandoffEvents` | Derived from each handoff's `respondedAt`/`respondedBy`/`responseNote` — send + respond only, no view/remind events | 2 per handoff |
 | `time.PayPeriods` | Generated from confirmed cadence (§7.1) | Spanning all punches |
 | `time.TimeEntries` | `tc.entries{}` (+ `tc.active` per §7.3) | As exported |
 | `time.TimeEntryCorrections` | **No source.** Deploy 17 hard-deletes instead | 0 |
@@ -295,13 +295,20 @@ that makes the three documents verifiably consistent: no table may be absent fro
 | `portal.Notifications` | `notifications[]`, fanned out by office | ≤30 × recipients |
 | `portal.Messages` | `inbox{}` | ≤30 per employee |
 | `portal.Resources` | `resources[]` | As exported |
+| `portal.WorkSaturdays` ⚠️ | **`workSaturdays`** — tax-season Saturday scheduling (`saveSaturday`/`removeSaturday`). Fields: `id, date, office, name, note, added`. **This table is missing from the database blueprint entirely** | As exported |
 | `doc.Documents` | `resources[].fileData` + `photos[].dataUrl` (§7.2) | Files only |
 | `doc.DocumentPermissions` | **New capability** | 0 |
-| `audit.AuditLog` | `activity[]` (≤100, §3.3) + migration's own entries | ≤100 legacy |
+| `audit.AuditLog` | `activity[]` (≤100, §3.3) **plus `clientWorkflow.audit`**, which is a separate uncapped workflow trail | ≤100 + workflow audit |
 | `audit.LoginHistory` | **No source.** No login tracking existed | 0 |
 | `audit.SecurityEvents` | **No source** | 0 |
 
-**Fifteen tables migrate zero rows.** That is the honest measure of how much of this
+> ⚠️ **Revised after seeing production (§0).** The dispositions above are corrected for the
+> real build. Seven entries that read "no source" in Draft 1 — contacts, workflow history,
+> handoffs, handoff events, the PTO ledger, the workflow audit trail, and assignment
+> back-fill — **do have production sources.** One entity, `workSaturdays`, has no
+> destination table at all and must be added to the database blueprint.
+
+**In the demo build, fifteen tables migrate zero rows.** That is the honest measure of how much of this
 system is new capability rather than a port — and it is concentrated exactly where the
 audit found the weaknesses: handoffs, corrections, payroll adjustments, login history and
 security events. Deploy 17 had no way to record any of them.
@@ -369,7 +376,14 @@ owner (build plan §12).
 resolution list for the rest. Any unresolvable owner **blocks** migration rather than
 defaulting — see §6.
 
-**Ownership history does not exist before cutover.** Every client gets exactly one
+> ⚠️ **Partly superseded.** Production still overwrites a single `assignedTo` field on
+> accept (`wfRespondHandoff` does `c.assignedTo=h.to`), so there is no assignment *ledger*
+> — that finding holds. But the handoff log itself records `from`, `to`, `respondedAt` and
+> `respondedBy` for every accepted handoff, so an ownership chain **can be partially
+> reconstructed** and back-filled into `ClientAssignments`. Do that: it gives the ledger a
+> real starting history instead of a flat "everyone acquired their book at cutover."
+
+**In the demo build, ownership history does not exist before cutover.** Every client gets exactly one
 assignment row, starting at the migration timestamp with `StartReason = Migration`. We
 cannot invent a history we do not have, and we must not: `ClientAssignments` is a payroll-
 and accountability-grade ledger, and seeding it with guesses would poison it. The honest
@@ -396,8 +410,11 @@ Build plan §6 also lists `Waiting for Authorization`, which has **no Deploy 17 
 meant "we finished our part," not "IRS accepted it." **Alex Rivera should confirm both
 before Phase 5**, because these drive the workflow-duration reports.
 
-`TaxYear` is not in Deploy 17 at all. Migration sets it to the tax year OGO confirms
-(likely 2025 for work in progress during 2026); it cannot be derived.
+> ✅ **Corrected:** `TaxYear` **is** in production — `clientWorkflow.clients[].taxYear`,
+> defaulted to the prior calendar year. It migrates directly and does not need to be guessed.
+
+`TaxYear` is not in the *demo* build. There, migration would set it to a tax year OGO
+confirms; in production it is a real field.
 
 ### 4.5 Requests → `hr.EmployeeRequests` + `hr.PtoTransactions`
 

@@ -557,6 +557,19 @@ CREATE TABLE crm.ClientWorkflowHistory (
 CREATE INDEX IX_CliWfH_Client ON crm.ClientWorkflowHistory(ClientId, TaxYear, ChangedAtUtc DESC);
 ```
 
+> ⚠️ **Design gap found against production.** `clientWorkflow.clients` in the live build
+> tracks a tax-return pipeline as **25 parallel fields**, not one stage enum:
+> `prepStatus`, `irsStatus`, `rejectionCode`, `docsComplete`, `numbersReviewed`,
+> `consentReceived`, `taxSlayerEntered`, `clientUpdateSent`, `returnType`, `reviewer`,
+> `nextAction`, `communicationMethod`, and the dates `submittedDate`, `acceptedDate`,
+> `rejectedDate`, `pendingDate`, `refundDate`, `followUpDate`, `lastContactDate`.
+>
+> A single `WorkflowStageId` cannot hold this — several of these are independent of one
+> another (a return can be e-filed *and* awaiting a consent form). `ClientWorkflowStatus`
+> needs the milestone booleans and dates as first-class columns, with `WorkflowStageId` as
+> a **derived** headline status rather than the source of truth. **This must be redesigned
+> before Phase 5.**
+
 `DurationInPreviousStageMinutes` is written at transition time. It turns "how long do
 clients sit in Waiting for Authorization?" into a `SELECT AVG(...)` instead of a
 self-join across time — the single report a tax firm most wants.
@@ -1061,6 +1074,7 @@ Abbreviated — these are low-risk tables. Full DDL follows the same conventions
 | `portal.Notifications` | `NotificationId bigint, RecipientEmployeeId, Kind, Title, Body, LinkUrl, CreatedAtUtc, ReadAtUtc, DismissedAtUtc` | Addressed by `EmployeeId`, not name |
 | `portal.Messages` | `MessageId bigint, FromEmployeeId, ToEmployeeId, Body, SentAtUtc, ReadAtUtc` | Replaces `S.inbox` keyed by display name |
 | `portal.Resources` | `ResourceId, Name, Description, Url, Category, DocumentId (NULL), OfficeScopeId, SortOrder, IsActive` | Files go to `doc.Documents`, never inline |
+| `portal.WorkSaturdays` | `WorkSaturdayId, WorkDate, OfficeId, Label, Note, CreatedByEmployeeId, CreatedAtUtc, CanceledAtUtc` | **Added after review of production.** Tax-season Saturday scheduling; unique on `(WorkDate, OfficeId)` |
 
 Three of these fix real defects found in Deploy 17: shared task completion, global alert
 dismissal, and name-keyed inboxes (see migration map §6).

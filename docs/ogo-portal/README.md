@@ -18,6 +18,9 @@ The current frontend behavior specification is the portal supplied on **2026-08-
 - The patch makes `fbSavePunch(k)` write `tc/activeOffice/<employee>` along with the employee's active shift and entries.
 - JavaScript syntax validation passes after the patch.
 - A lightweight hash/pointer is kept in [`baseline/OGO_Portal_Transition_Baseline.html`](baseline/OGO_Portal_Transition_Baseline.html).
+- ⚠️ **The full baseline must never be committed here.** It carries real staff PII and live
+  Firebase configuration, and this repository is public via GitHub Pages. The pointer holds
+  the hash only — verify any working copy against it before treating it as the baseline.
 
 This transition baseline preserves the working UI and behavior: dashboard, multi-office time clock, PTO, requests, Client Workflow, handoffs with accept/decline, inbox, events, reports, resources and mobile layout.
 
