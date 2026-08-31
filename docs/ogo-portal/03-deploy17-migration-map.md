@@ -1,7 +1,37 @@
 # Deploy 17 → SQL Server Migration Map
 
-**Status:** Draft 1 for review · **Source of truth:** `ogo-staff-portal/index.html` @ `b02e783` (1,453 lines)
+**Status:** ⚠️ **Draft 1 — SUPERSEDED IN PART. Re-derivation required.**
+**Written against:** `ogo-staff-portal/index.html` @ `b02e783` (1,453 lines) — **the public demo build**
+**Actual production:** the file deployed to `ogodashboard1.netlify.app` (1,977 lines, 282 KB, `FB_PATH='portals/ogo-v6-final/state'`)
 **Companion documents:** [`01-database-blueprint.md`](01-database-blueprint.md) · [`02-api-blueprint.md`](02-api-blueprint.md)
+
+---
+
+## 0. ⚠️ Read this before anything else
+
+This document was derived from the **public demo build in this repository**, on the
+working assumption — flagged at the time as blocker #1 — that it matched production. **It
+does not.** Production is a separate, substantially newer file, deployed to Netlify by
+manual drag-and-drop with no Git connection, and is roughly 36% larger.
+
+Three headline findings below are **wrong for production** and are corrected here:
+
+| § | Draft 1 said | Production reality |
+|---|---|---|
+| §5 | "Deploy 17 has no handoff feature" — zero matches | **Handoffs exist.** 44 references. The engine is a port, not new construction |
+| §2 | `fbRef.set()` overwrites the whole document on every action | **Production uses `fbRef.update()`**, excludes `tc` from the bulk write, and writes punches to per-employee paths via `fbSavePunch(k)`. The catastrophic whole-document race is demo-only |
+| §4 | State tree as listed | Production adds `clientWorkflow`, `workSaturdays`, and the sync markers `eventsSync`, `ptoSeed`, `satSync`, `seededEvents`, `staffSync` |
+
+**Everything else in this document must be re-verified against the production file before
+it is used to build anything.** The conventions, the reconciliation method, the name→ID
+resolution procedure and the cutover sequence all still hold as *method*; the specific
+field inventories do not.
+
+What survives unchanged: §3.1 (config in JavaScript constants, not Firebase — still true,
+and still means freezing the *file* matters), §3.2 (name-keyed identity), §3.8 (PINs in
+`localStorage`), and the §9 reconciliation gates.
+
+**Corrected blocker list is §11.**
 
 ---
 
@@ -451,7 +481,14 @@ into payroll because a constraint was loosened.
 Build plan §17 lists `Old handoff → ClientHandoffs`, and §17's reconciliation target
 includes **9 handoffs**.
 
-**Deploy 17 contains no handoff feature.** Searching the full 1,453 lines for `handoff`,
+> ✅ **RESOLVED — and this section's premise was wrong.** Production *does* have handoffs
+> (44 references in the deployed file). What follows describes the **demo** build only.
+> For production, `crm.ClientHandoffs` and `crm.HandoffEvents` are a **port with real
+> source rows**, not new construction, and the "9 handoffs must reconcile" gate is valid
+> and must be honoured. The production handoff data model still needs mapping — that is
+> the first task of the re-derivation.
+
+**The demo build contains no handoff feature.** Searching its 1,453 lines for `handoff`,
 `hand off`, `transfer` and `reassign` returns zero matches — no state key, no function, no
 UI, no button. Client ownership is a free-text `owner` field on `clients[]`, edited in
 place by `saveClient()`. Changing an owner overwrites the previous value with no record
@@ -691,8 +728,10 @@ reversible.
 
 | # | Blocker | Blocks | Owner |
 |---|---|---|---|
-| 1 | **Is the production Deploy 17 the same file as this repo copy?** (§5) | Everything | Gina |
-| 2 | Where do the "9 handoffs" come from? (§5) | Phase 0 close, §9 gate | Gina |
+| 0 | ⚠️ **Re-derive this document against the production file** (§0) | Everything downstream | Claude |
+| 1 | ~~Is production the same file as the repo copy?~~ **ANSWERED: no.** Production is a separate 1,977-line build on Netlify | — | ✅ closed |
+| 2 | ~~Where do the "9 handoffs" come from?~~ **ANSWERED: production has a real handoff feature** | — | ✅ closed |
+| 2b | **Get production into version control.** It is a manual Netlify drop with no Git link, so there is no history and no rollback to a known good build | Stage A of §10 | Gina |
 | 3 | Pay period cadence — biweekly or semi-monthly? (§7.1) | Phase 9, historical period generation | OGO payroll |
 | 4 | Real work-email addresses for all employees (§4.1) | Phase 3 (accounts) | HR |
 | 5 | Quinn Foster's hire date is blank (§4.1) | PTO calc for that employee | HR |

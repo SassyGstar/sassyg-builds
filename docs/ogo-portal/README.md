@@ -34,15 +34,22 @@ ledgers (the business narrative).
 
 ## Read this first
 
-Two findings in **(3)** change the build plan and need an answer before Phase 0 closes:
+⚠️ **The migration map is partly superseded.** It was derived from the public demo build
+in this repo, which turned out **not** to be production. Production is a separate,
+substantially newer file deployed to Netlify by manual drop. Its headline "no handoff
+feature" finding is **false for production** — handoffs exist there and are a port, not
+new construction. See [3](03-deploy17-migration-map.md) §0 for the full correction and
+what still needs re-deriving.
 
-1. **Deploy 17 has no handoff feature.** Zero matches for `handoff`, `transfer` or
-   `reassign` across all 1,453 lines. The handoff engine is new construction, not a port,
-   and the "9 handoffs must reconcile" gate has no source table
-   ([3](03-deploy17-migration-map.md) §5).
-2. **Roles, PTO classes, geofences and pay periods live in JavaScript constants, not in
-   Firebase.** They are absent from any data export. Freezing Deploy 17 must freeze the
-   *file*, not just the data ([3](03-deploy17-migration-map.md) §3.1).
+What still holds regardless:
+
+1. **Roles, PTO classes, geofences and pay periods live in JavaScript constants, not in
+   Firebase.** They are absent from any data export, so freezing Deploy 17 must freeze the
+   *file*, not just the data ([3](03-deploy17-migration-map.md) §3.1). This is true of both
+   builds and is the reason getting production into version control comes first.
+2. **Production has no version control.** It is a hand-dropped single file on Netlify with
+   no Git link — no history, no rollback to a known build. That is Stage A of the migration
+   plan and it is not done.
 
 The full blocker list is [3](03-deploy17-migration-map.md) §11; open design decisions for
 OGO are [1](01-database-blueprint.md) §14.

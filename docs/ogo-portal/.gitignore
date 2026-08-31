@@ -1,0 +1,5 @@
+# Production portal exports contain real staff PII and live Firebase config.
+# This repository is public (GitHub Pages from main) — never commit them.
+*Deploy_17*.zip
+**/live/index.html
+ogo-portal-production*.html
