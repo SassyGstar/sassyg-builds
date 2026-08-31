@@ -308,7 +308,7 @@ button,input,select,textarea{font:inherit}
         <div class="hrow">
           <div class="uchip" id="userChip">Not signed in</div>
           <!-- TAX ACADEMY LINK: change the href below to point somewhere else -->
-          <a class="hbtn" id="taxAcademyBtn" href="https://subtle-kheer-72f27c.netlify.app/" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;border-color:var(--gold);color:var(--gold);font-weight:800" title="Open the OGO Tax Academy in a new tab">&#127891; Tax Academy</a>
+          <a class="hbtn" id="taxAcademyBtn" href="https://ogo-tax-academy.netlify.app/" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;border-color:var(--gold);color:var(--gold);font-weight:800" title="Open the OGO Tax Academy in a new tab">&#127891; Tax Academy</a>
           <button class="hbtn" id="adminToggle" onclick="toggleAdmin()">Admin: Off</button>
           <button class="hbtn" id="pinBtn" onclick="changeMyPin()" style="display:none">&#128273; PIN</button>
           <button class="hbtn" onclick="logoutPortal()">Logout</button>
@@ -576,7 +576,7 @@ const USER_KEY='ogo_user_v6f';
 const ROLES={'LeBrun Alexis':'Admin','Berline Jolimer':'Admin','Gina Altidor':'Admin','Vestin Paul':'Manager','Frances Torres':'Manager'};
 function getRole(n){return ROLES[n]||'Staff';}
 var PTO_SAL=['LeBrun Alexis','Gina Altidor','Vestin Paul','Frances Torres','Maria Nino'];
-var PTO_HR=['Brandy Alexis','Berline Jolimer','Guiovan Galarza','Bianca Sanchez','Clariluz Graham','Giovanni LeBrun Alexis'];
+var PTO_HR=['Brandy Alexis','Berline Jolimer','Bianca Sanchez','Clariluz Graham','Giovanni LeBrun Alexis'];
 function getPTOInfo(emp){
   var isSal=PTO_SAL.indexOf(emp.name)>-1,isHr=PTO_HR.indexOf(emp.name)>-1;
   if(!isSal&&!isHr)return null;
@@ -642,8 +642,7 @@ const EMPLOYEES=[
   {id:4,name:'Berline Jolimer',bday:'1980-04-11',hireDate:'2025-07-01',phone:'(407) 272-1097',email:'berlined@yahoo.com',pos:'Human Resources',office:'Orlando',status:'Active'},
   {id:5,name:'Gina Altidor',bday:'1981-04-30',hireDate:'2018-01-01',phone:'(407) 545-1914',email:'gina@ogofin.com',pos:'Tax Resolution Director',office:'Orlando',status:'Active'},
   {id:6,name:'Frances Torres',bday:'2003-09-02',hireDate:'2025-03-28',phone:'(787) 944-5063',email:'frances@ogofin.com',pos:'Team Lead',office:'Clermont',status:'Active'},
-  {id:7,name:'Guiovan Galarza',bday:'2000-01-03',hireDate:'2025-10-13',phone:'(407) 575-6245',email:'guiovang@gmail.com',pos:'Administrative Assistant',office:'Orlando',status:'Active'},
-  {id:8,name:'Bianca Sanchez',bday:'1988-05-23',hireDate:'2025-10-09',phone:'(786) 663-8780',email:'bianca_luna02@aol.com',pos:'Administrative Assistant',office:'Clermont',status:'Active'},
+    {id:8,name:'Bianca Sanchez',bday:'1988-05-23',hireDate:'2025-10-09',phone:'(786) 663-8780',email:'bianca_luna02@aol.com',pos:'Administrative Assistant',office:'Clermont',status:'Active'},
   {id:9,name:'Clariluz Graham',bday:'1990-10-19',hireDate:'2025-11-19',phone:'(305) 479-8923',email:'clariluz@truetypeinc.com',pos:'Administrative Assistant',office:'Winter Haven',status:'Active'},
   {id:10,name:'Giovanni LeBrun Alexis',bday:'2002-12-17',hireDate:'2024-12-02',phone:'(407) 341-1141',email:'giovannilalexis17@gmail.com',pos:'Bookkeeping',office:'Orlando',status:'Active'},
   {id:11,name:'Maria Nino',bday:'2003-12-10',hireDate:'',phone:'(786) 382-3196',email:'marialenb12@gmail.com',pos:'Marketing Specialist',office:'Clermont',status:'Active'}
@@ -699,6 +698,7 @@ function makeDefault(){
     eventsSync:'',
     ptoSeed:'',
     satSync:'',
+    staffSync:'',
     workSaturdays:[{id:800,date:'2027-01-23',note:'',office:'All'},{id:801,date:'2027-01-30',note:'',office:'All'},{id:802,date:'2027-02-06',note:'',office:'All'},{id:803,date:'2027-02-13',note:'',office:'All'},{id:804,date:'2027-02-20',note:'',office:'All'},{id:805,date:'2027-02-27',note:'',office:'All'},{id:806,date:'2027-03-06',note:'',office:'All'},{id:807,date:'2027-03-13',note:'Tentative - confirm final date',office:'All'}],
     removedSeeds:{events:[],employees:[]}
   };
@@ -780,6 +780,20 @@ function fbMerge(remote){
     if(!S.removedSeeds)S.removedSeeds={events:[],employees:[]};
     S.removedSeeds.events=[];
     S.eventsSync='2026-08-17';
+    evMigrated=true;
+  }
+  /* one-time: remove staff who have left the company */
+  if(S.staffSync!=='2026-08-17-departures'){
+    ['Guiovan Galarza'].forEach(function(nm){
+      var e=(S.employees||[]).find(function(x){return x.name===nm;});
+      if(e){
+        if(!S.removedSeeds)S.removedSeeds={events:[],employees:[]};
+        if(!S.removedSeeds.employees)S.removedSeeds.employees=[];
+        if(S.removedSeeds.employees.indexOf(e.id)<0)S.removedSeeds.employees.push(e.id);
+        S.employees=S.employees.filter(function(x){return x.name!==nm;});
+      }
+    });
+    S.staffSync='2026-08-17-departures';
     evMigrated=true;
   }
   /* one-time: publish the tax season Saturday schedule */
