@@ -411,12 +411,14 @@ employees. That equality is the Phase 8 gate.
 | `office` | `OfficeId` | Name lookup. ⚠️ **Meaning changed mid-life.** Before the multi-office geofence fix this was the employee's *home* office; after it, the office they actually clocked in at. Punches carrying `homeOffice` are post-fix and their `office` is a verified location; those without it are pre-fix and are only an assumption |
 | `homeOffice` | *(cross-check)* | Post-fix punches only. Where it differs from `office`, the employee worked at another location — expected, not an error |
 | `manual` | `EntrySource` | `true`→2, `false`→3 (Migrated). **No migrated punch is `EntrySource=1`** |
+| `autoOut` | `EntrySource` = 4 | System-closed at 11:59 PM after a missed clock-out. These are *ceilings, not measurements* — import with the correction row intact and treat every one as needing review, never as verified hours |
 | `notes` | `Note` | Direct |
 | — | `PayPeriodId` | Assigned from generated historical periods (§7.1) |
 | — | `EntryStatus` | 2 (Closed) |
 | — | geo/IP/device columns | `NULL`. Deploy 17 checked the geofence but **never stored the result** — `handleClock()` calls `checkGeo()` and discards it |
 
-`CK_TimeEntry_MaxSpan` (18 hours) may reject legacy rows from forgotten clock-outs. These
+`CK_TimeEntry_MaxSpan` (18 hours) may reject legacy rows from forgotten clock-outs,
+including `autoOut` entries closed at 11:59 PM after a late-morning clock-in. These
 **do not get the constraint relaxed.** They import as `EntryStatus = 3 (Voided)` with
 `VoidReason = 'Migrated: exceeds maximum shift length; requires manager correction'`, plus
 an exception-report row. A manager then enters the real hours as a correction. That is one

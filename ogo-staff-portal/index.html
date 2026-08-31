@@ -410,6 +410,7 @@ button,input,select,textarea{font:inherit}
                   <div id="myPunchLog"></div>
                 </div>
               </div>
+              <div id="tcOpenShifts" style="display:none;margin-top:14px"></div>
               <div style="margin-top:14px">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
                   <div class="side-title" style="margin-bottom:0">Team Timelog</div>
@@ -630,7 +631,7 @@ function makeDefault(){
     offices:{
       Orlando:{manager:'Alex Rivera',phone:'(407) 794-2762',address:'Suite 405 \u00B7 5401 S. Kirkman Rd \u00B7 Orlando FL 32819',hours:'Mon\u2013Fri 10AM\u20135PM',email:'orlando@ogofin.com',note:'Main operations hub.',notes:[]},
       Clermont:{manager:'Jordan Blake',phone:'(407) 794-2621',address:'1200 Oakley Seaver Dr #213 \u00B7 Clermont FL 34711',hours:'Mon\u2013Fri 10AM\u20135PM',email:'clermont@ogofin.com',note:'Community-facing office.',notes:[]},
-      'Winter Haven':{manager:'Morgan Reyes',phone:'',address:'99 6th St SW Suite 201 \u00B7 Winter Haven FL 33880',hours:'Mon\u2013Fri 10AM\u20135PM',email:'winterhaven@ogofin.com',note:'Regional office.',notes:[]}
+      'Winter Haven':{manager:'Morgan Reyes',phone:'(863) 350-6103',address:'99 6th St SW Suite 201 \u00B7 Winter Haven FL 33880',hours:'Mon\u2013Fri 10AM\u20135PM',email:'winterhaven@ogofin.com',note:'Regional office.',notes:[]}
     },
     requests:[],
     clients:[
@@ -655,6 +656,7 @@ function makeDefault(){
     analytics:{monthlyReturns:[42,51,49,63,58,71],months:['Jan','Feb','Mar','Apr','May','Jun']},
     ptoOverrides:{},
     rosterSync:'',
+    officeSync:'',
     removedSeeds:{events:[],employees:[]}
   };
 }
@@ -726,6 +728,19 @@ function fbMerge(remote){
     });
     S.rosterSync='2026-07-07';
   }
+  /* one-time office contact fill: adds details that are MISSING, never overwrites
+     anything an admin has already set */
+  if(S.officeSync!=='2026-08-31'){
+    var seedOff=makeDefault().offices;
+    if(!S.offices)S.offices={};
+    Object.keys(seedOff).forEach(function(nm){
+      if(!S.offices[nm]){S.offices[nm]=JSON.parse(JSON.stringify(seedOff[nm]));return;}
+      ['phone','email','address','hours','manager','note'].forEach(function(f){
+        if(!S.offices[nm][f]&&seedOff[nm][f])S.offices[nm][f]=seedOff[nm][f];
+      });
+    });
+    S.officeSync='2026-08-31';
+  }
   /* ensure seed events present */
   makeDefault().events.forEach(function(se){if(rmV.indexOf(se.id)>-1)return;if(!S.events.find(function(e){return e.id===se.id;}))S.events.push(se);});
   S.events.sort(function(a,b){return new Date(a.date)-new Date(b.date);});
@@ -736,6 +751,7 @@ function fbMerge(remote){
   if(!S.tc.activeOffice)S.tc.activeOffice={};
   if(!S.inbox)S.inbox={};
   fbLock=false;
+  if(autoClockOutStale()>0)fbSave();
   renderAll();
 }
 function connectFB(){
@@ -771,6 +787,17 @@ function currPP(){const n=new Date();return getPPs().find(function(p){return n>=
 
 /* ── GEOFENCING ── */
 function distM(la1,lo1,la2,lo2){const R=6371000,d1=(la2-la1)*Math.PI/180,d2=(lo2-lo1)*Math.PI/180;const a=Math.sin(d1/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(d2/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+/* Active Admins, plus the Manager of the affected office. */
+function clockAlertRecipients(office){
+  var out=[];
+  (S.employees||[]).forEach(function(e){
+    if(e.status!=='Active')return;
+    var r=getRole(e.name);
+    if(r==='Admin'||(r==='Manager'&&office&&e.office===office))out.push(e.name);
+  });
+  return out.filter(function(n,i,a){return a.indexOf(n)===i;});
+}
+function punchType(e){return e.autoOut?'System':(e.manual?'Manual':'Auto');}
 function fmtDist(d){return d<1000?d+'m':(d/1000).toFixed(1)+'km';}
 /* Nearest OGO office to the current position, regardless of which office the
    employee is assigned to. Staff who cover multiple offices can clock in at
@@ -863,6 +890,104 @@ function handleClock(){
     renderTC();
     toast('\u23F1 Clocked in at '+ciTime+'!');
   }
+}
+
+/* ── AUTO CLOCK-OUT ──
+   Nobody's shift should run past midnight. Any punch still open once its clock-in
+   day has ended is closed at 11:59:59 PM of that day and flagged for review, so a
+   forgotten punch costs a correction instead of 40 phantom hours.
+
+   Deploy 17 has no server, so this runs in whatever browsers happen to be open.
+   The entry id is derived from the employee and the date, so two browsers sweeping
+   at the same moment cannot create duplicate punches. */
+function autoClockOutStale(){
+  if(!S.tc||!S.tc.active)return 0;
+  var today=ldate(),closed=0,closedList=[];
+  Object.keys(S.tc.active).forEach(function(k){
+    var ci=S.tc.active[k];
+    if(!ci)return;
+    var inDate=ldate(ci);
+    if(inDate>=today)return;                     /* same day, still running - leave it */
+    var out=new Date(ci);out.setHours(23,59,59,0);
+    var co=out.getTime();
+    if(co<=ci){delete S.tc.active[k];return;}    /* nonsensical, drop the orphan */
+    if(!S.tc.entries)S.tc.entries={};
+    if(!S.tc.entries[k])S.tc.entries[k]=[];
+    var id='auto_'+k+'_'+inDate;
+    if(S.tc.entries[k].some(function(e){return e.id===id;})){
+      delete S.tc.active[k];
+      if(S.tc.activeOffice)delete S.tc.activeOffice[k];
+      return;                                    /* another browser already closed it */
+    }
+    var emp=ebi(parseInt(String(k).replace('emp_',''),10));
+    S.tc.entries[k].push({
+      id:id,date:inDate,clockIn:ci,clockOut:co,duration:co-ci,
+      office:(S.tc.activeOffice&&S.tc.activeOffice[k])||(emp?emp.office:'Orlando'),
+      homeOffice:emp?emp.office:'',
+      manual:false,autoOut:true,
+      notes:'System clock out \u2014 no clock out was recorded by 12:00 AM. Shift closed at 11:59 PM on '+inDate+'. Verify actual hours and correct if needed.'
+    });
+    delete S.tc.active[k];
+    if(S.tc.activeOffice)delete S.tc.activeOffice[k];
+    addLog((emp?emp.name:'Employee')+' was clocked out by the system at 11:59 PM on '+inDate+' \u2014 no clock out recorded. Hours need review.',(emp?emp.office:'All'),'System');
+    if(emp)addInbox(emp.name,'\u23F0 You did not clock out on '+inDate+'. The system closed your shift at 11:59 PM. If that is not right, ask your manager to correct it.');
+    closedList.push({name:emp?emp.name:'Employee '+k,office:emp?emp.office:'',date:inDate,hours:fhm(co-ci)});
+    closed++;
+  });
+  if(closedList.length){
+    var who=closedList.map(function(c){return c.name+' ('+c.date+', '+c.hours+')';}).join('; ');
+    var offices=closedList.map(function(c){return c.office;}).filter(function(o,i,a){return o&&a.indexOf(o)===i;});
+    var recips=[];
+    (offices.length?offices:[null]).forEach(function(o){
+      clockAlertRecipients(o).forEach(function(n){if(recips.indexOf(n)<0)recips.push(n);});
+    });
+    var msg='\u26A0\uFE0F Missed clock out \u2014 '+closedList.length+' shift'+(closedList.length>1?'s':'')+' closed by the system at 11:59 PM: '+who+'. Review the hours in Time Clock and correct if needed.';
+    recips.forEach(function(n){addInbox(n,msg);});
+    addNotif('\u26A0\uFE0F '+closedList.length+' employee'+(closedList.length>1?'s':'')+' did not clock out \u2014 system closed the shift'+(closedList.length>1?'s':'')+'. Hours need review.','All');
+  }
+  return closed;
+}
+
+/* Anyone on the clock right now, longest-running first. */
+function openShifts(){
+  var out=[],now=Date.now();
+  if(!S.tc||!S.tc.active)return out;
+  Object.keys(S.tc.active).forEach(function(k){
+    var ci=S.tc.active[k];if(!ci)return;
+    var emp=ebi(parseInt(String(k).replace('emp_',''),10));if(!emp)return;
+    out.push({emp:emp,since:ci,ms:now-ci,office:(S.tc.activeOffice&&S.tc.activeOffice[k])||emp.office});
+  });
+  return out.sort(function(a,b){return b.ms-a.ms;});
+}
+function renderOpenShifts(){
+  var el=document.getElementById('tcOpenShifts');if(!el)return;
+  var canSee=CU&&(CU.role==='Admin'||CU.role==='Manager'||S.adminMode);
+  var list=openShifts().filter(function(o){return S.activeOffice==='All'||o.office===S.activeOffice;});
+  if(!canSee||!list.length){el.style.display='none';el.innerHTML='';return;}
+  var LONG=10*3600000;
+  var longOnes=list.filter(function(o){return o.ms>=LONG;}).length;
+  el.style.display='block';
+  el.innerHTML='<div style="padding:14px;border-radius:14px;border:1px solid '+(longOnes?'#efc1c1':'var(--ln)')+';background:'+(longOnes?'#fdeeee':'#F7F9FA')+'">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+    '<div class="side-title" style="margin-bottom:0">'+(longOnes?'\u26A0\uFE0F ':'\u23F1 ')+'Currently Clocked In ('+list.length+')</div>'+
+    (longOnes?'<span style="font-size:10px;font-weight:800;color:var(--red);background:#fff;border:1px solid #efc1c1;padding:3px 8px;border-radius:20px">'+longOnes+' over 10h</span>':'')+
+    '</div>'+
+    list.map(function(o){
+      var lng=o.ms>=LONG;
+      return'<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:#fff;border:1px solid '+(lng?'#efc1c1':'var(--ln)')+';margin-bottom:6px">'+
+        '<div class="tc-log-avatar">'+ini(o.emp.name)+'</div>'+
+        '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:800;color:var(--navy)">'+esc(o.emp.name)+'</div>'+
+        '<div class="meta">'+esc(o.office)+' \u00B7 since '+new Date(o.since).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})+
+        (ldate(o.since)!==ldate()?' on '+ldate(o.since):'')+'</div></div>'+
+        '<div style="font-size:12px;font-weight:800;color:'+(lng?'var(--red)':'var(--green)')+'">'+fhm(o.ms)+'</div>'+
+        '</div>';
+    }).join('')+
+    '<div class="meta" style="margin-top:4px;font-style:italic">Any shift still open at midnight is closed automatically at 11:59 PM and flagged for review.</div></div>';
+}
+function runAutoClockOut(){
+  var n=autoClockOutStale();
+  if(n>0){fbSave();renderAll();}
+  return n;
 }
 
 /* ── SESSION TIMER ── */
@@ -1277,6 +1402,7 @@ function renderPhotos(){const el=document.getElementById('photoBoardGrid');if(!e
 /* ── TIME CLOCK RENDER ── */
 function getPP(){const ppSel=document.getElementById('tcPayPeriodSelect');return getPPs().find(function(p){return p.id===(ppSel?ppSel.value:currPP().id);})||currPP();}
 function renderTC(){
+  renderOpenShifts();
   const tl=document.getElementById('tcTeamLog');if(!tl)return;
   const aeb=document.getElementById('tcAdminEditBtn');if(aeb)aeb.style.display=(CU&&(CU.role==='Admin'||S.adminMode))?'inline-flex':'none';
   const ppSel=document.getElementById('tcPayPeriodSelect');
@@ -1333,20 +1459,20 @@ function showPunchDetail(empId){
   else{
     let totalMs=0;
     let html='<table style="width:100%;border-collapse:separate;border-spacing:0 4px;font-size:12px"><thead><tr><th style="text-align:left;color:var(--mu);font-size:10px;padding:0 8px 4px">Date</th><th style="text-align:left;color:var(--mu);font-size:10px;padding:0 8px 4px">In</th><th style="text-align:left;color:var(--mu);font-size:10px;padding:0 8px 4px">Out</th><th style="text-align:left;color:var(--mu);font-size:10px;padding:0 8px 4px">Duration</th><th style="color:var(--mu);font-size:10px;padding:0 8px 4px">Type</th><th></th></tr></thead><tbody>';
-    ppEe.forEach(function(e){totalMs+=e.duration;html+='<tr><td style="padding:7px 8px;background:#fff;border:1px solid var(--ln);border-right:none;border-radius:10px 0 0 10px;font-weight:700">'+new Date(e.date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+'</td><td style="padding:7px 8px;background:#fff;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln);color:var(--green);font-weight:700">'+fmt(e.clockIn)+'</td><td style="padding:7px 8px;background:#fff;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln);color:var(--red);font-weight:700">'+fmt(e.clockOut)+'</td><td style="padding:7px 8px;background:#fff;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln);font-weight:800">'+fhm(e.duration)+'</td><td style="padding:7px 8px;background:#fff;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln)"><span style="font-size:10px;background:'+(e.manual?'#fbefdd':'#e5f5ea')+';color:'+(e.manual?'var(--orange)':'var(--green)')+';padding:2px 6px;border-radius:4px">'+(e.manual?'Manual':'Auto')+'</span></td><td style="padding:7px 8px;background:#fff;border:1px solid var(--ln);border-left:none;border-radius:0 10px 10px 0;text-align:center"><button data-ek="'+esc(ek)+'" data-eid="'+esc(e.id)+'" onclick="var b=this;deletePunch(b.dataset.ek,b.dataset.eid)" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px">\u2715</button></td></tr>';});
+    ppEe.forEach(function(e){totalMs+=e.duration;var ty=punchType(e);var tyBg=ty==='System'?'#fdeeee':ty==='Manual'?'#fbefdd':'#e5f5ea';var tyC=ty==='System'?'var(--red)':ty==='Manual'?'var(--orange)':'var(--green)';html+='<tr><td style="padding:7px 8px;background:#fff;border:1px solid var(--ln);border-right:none;border-radius:10px 0 0 10px;font-weight:700">'+new Date(e.date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})+(e.notes?'<div style="font-weight:600;font-size:10px;color:var(--mu);font-style:italic;margin-top:3px;white-space:normal;max-width:220px">'+esc(e.notes)+'</div>':'')+'</td><td style="padding:7px 8px;background:#fff;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln);color:var(--green);font-weight:700">'+fmt(e.clockIn)+'</td><td style="padding:7px 8px;background:#fff;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln);color:var(--red);font-weight:700">'+fmt(e.clockOut)+'</td><td style="padding:7px 8px;background:#fff;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln);font-weight:800">'+fhm(e.duration)+'</td><td style="padding:7px 8px;background:#fff;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln)"><span style="font-size:10px;background:'+tyBg+';color:'+tyC+';padding:2px 6px;border-radius:4px;font-weight:800">'+ty+'</span></td><td style="padding:7px 8px;background:#fff;border:1px solid var(--ln);border-left:none;border-radius:0 10px 10px 0;text-align:center"><button data-ek="'+esc(ek)+'" data-eid="'+esc(e.id)+'" onclick="var b=this;deletePunch(b.dataset.ek,b.dataset.eid)" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px">\u2715</button></td></tr>';});
     const{h:th,m:tm}=hm(totalMs);html+='</tbody><tfoot><tr><td colspan="3" style="padding:8px;font-weight:800;color:var(--navy)">Period Total</td><td style="padding:8px;font-weight:800;color:var(--green)">'+th+'h '+tm+'m</td><td colspan="2"></td></tr></tfoot></table><button class="btn-pri" style="margin-top:10px" onclick="openTCManual('+empId+')">+ Add Entry</button>';
     dbody.innerHTML=html;
   }
   det.style.display='block';det.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function exportPayroll(){
-  const pp=getPP();let csv='Employee,Office,Role,Date,Clock In,Clock Out,Duration (hrs),Type,Pay Period\n';
+  const pp=getPP();let csv='Employee,Office,Role,Date,Clock In,Clock Out,Duration (hrs),Type,Notes,Pay Period\n';
   const fmt=function(ts){return new Date(ts).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});};
   S.employees.filter(function(e){return e.status==='Active';}).forEach(function(emp){
     const ek='emp_'+emp.id;const ee=S.tc&&S.tc.entries?S.tc.entries[ek]||[]:[];
     const ppE=ee.filter(function(e){const d=new Date(e.date+'T00:00:00');return d>=pp.start&&d<=pp.end;}).sort(function(a,b){return a.clockIn-b.clockIn;});
-    if(!ppE.length){csv+='"'+emp.name+'","'+emp.office+'","'+emp.pos+'","","","","0","Auto","'+pp.label+'"\n';}
-    else ppE.forEach(function(e){csv+='"'+emp.name+'","'+emp.office+'","'+emp.pos+'","'+e.date+'","'+fmt(e.clockIn)+'","'+fmt(e.clockOut)+'",'+(e.duration/3600000).toFixed(2)+',"'+(e.manual?'Manual':'Auto')+'","'+pp.label+'"\n';});
+    if(!ppE.length){csv+='"'+emp.name+'","'+emp.office+'","'+emp.pos+'","","","","0","Auto","","'+pp.label+'"\n';}
+    else ppE.forEach(function(e){csv+='"'+emp.name+'","'+emp.office+'","'+emp.pos+'","'+e.date+'","'+fmt(e.clockIn)+'","'+fmt(e.clockOut)+'",'+(e.duration/3600000).toFixed(2)+',"'+punchType(e)+'","'+String(e.notes||'').replace(/"/g,'""')+'","'+pp.label+'"\n';});
   });
   const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='OGO_Timesheets_'+pp.label.replace(/[^a-z0-9]/gi,'_')+'.csv';a.click();URL.revokeObjectURL(url);toast('Payroll CSV exported!');
 }
@@ -1461,6 +1587,8 @@ function startClock(){
 try{CU=JSON.parse(localStorage.getItem(USER_KEY)||'null');}catch(e){CU=null;}
 connectFB();
 startClock();
+runAutoClockOut();
+setInterval(runAutoClockOut,5*60*1000);
 if(CU){
   document.getElementById('loginShell').style.display='none';
   document.getElementById('appShell').style.display='block';

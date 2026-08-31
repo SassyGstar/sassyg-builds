@@ -785,7 +785,7 @@ CREATE TABLE [time].TimeEntries (
     ClockInUtc      datetime2(3) NOT NULL,
     ClockOutUtc     datetime2(3) NULL,
     EntrySource     tinyint NOT NULL CONSTRAINT DF_TimeEntry_Src DEFAULT 1,
-        -- 1=Punch 2=ManagerManual 3=Migrated
+        -- 1=Punch 2=ManagerManual 3=Migrated 4=SystemAutoClose
     EntryStatus     tinyint NOT NULL CONSTRAINT DF_TimeEntry_Status DEFAULT 1,
         -- 1=Open 2=Closed 3=Voided
     -- Captured context at clock-in
@@ -1242,3 +1242,4 @@ These block Phase 1 sign-off. Each needs a human answer, not a default.
 | 5 | **Geofence enforcement** — hard block, or allow with a flag for review? | Deploy 17 hard-blocks; a bad GPS fix then costs someone their punch. *(Settled separately: proximity to **any** office is sufficient — see API blueprint §6.1)* | Gina |
 | 6 | **Tax year on workflow** — is `(Client, TaxYear)` the right grain, or does a client have several concurrent engagements? | Changes the `UX_CliWf_ClientYear` unique constraint | Alex Rivera |
 | 7 | **Client numbering** — reuse TaxDome IDs, or mint our own? | `ClientNumber` uniqueness and the TaxDome sync story | OGO ops |
+| 8 | **Auto-closed shift handling** — cap at a policy maximum (e.g. 8h) or void pending review? | An auto-close can exceed `CK_TimeEntry_MaxSpan`; capping pays a guess, voiding pays nothing until reviewed | OGO payroll |

@@ -388,6 +388,24 @@ Double-tapping the button is harmless.
 | `POST /timeclock/entries/{id}/corrections` | `TimeClock.Correct` | Adjust in/out. Writes `TimeEntryCorrections`, updates only `Effective*` |
 | `POST /timeclock/entries/{id}/void` | `TimeClock.Correct` | Reason ≥10 chars. Sets `EntryStatus = 3` |
 | `GET /timeclock/entries/{id}/history` | `TimeClock.Review` | Original punch + every correction, in order |
+| `GET /timeclock/open` | `TimeClock.Review` | Everyone currently on the clock, longest-running first — lets a manager catch a forgotten punch before midnight does |
+
+**Auto-close of forgotten punches.** A background job closes any entry still open once
+its clock-in day has ended, stamping `ClockOutUtc` at 23:59:59 local to the punch's
+office, `EntrySource = 4 (SystemAutoClose)`, and a `TimeEntryCorrections` row explaining
+why. It notifies the employee, every Admin, and the office's Manager. The job is
+idempotent on `(EmployeeId, WorkDateLocal)` so overlapping runs cannot double-close.
+
+This is a **flag for review, not a determination of hours** — 23:59:59 is a ceiling, not
+a claim about when the person left, and the entry is surfaced in
+`GET /payroll/periods/{id}/exceptions` until a manager corrects it. `POST /payroll/periods/{id}/lock`
+refuses while auto-closed entries are unreviewed unless exceptions are explicitly
+acknowledged.
+
+> ⚠️ An auto-closed shift can exceed the 18-hour `CK_TimeEntry_MaxSpan` (someone clocking
+> in at 12:05 AM and forgetting yields 23h 55m). The job must write the correction row and
+> set `EntryStatus` so the constraint is satisfied — either capping at the policy maximum
+> or voiding pending review. **OGO decides which** (open decision 8, database blueprint §14).
 
 **There is no `DELETE /timeclock/entries/{id}`. There will never be one.** Deploy 17's
 `deletePunch()` has no successor endpoint — its replacement is void-with-reason, and the
