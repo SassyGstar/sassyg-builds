@@ -9,13 +9,15 @@ The production rebuild is now anchored to the **current transition portal behavi
 | 3 | [Deploy 17 migration map](03-deploy17-migration-map.md) | Original field-by-field migration analysis; useful history but partly superseded by the current transition baseline |
 | 4 | [Netlify & sync contract](04-netlify-sync-contract.md) | Locks Netlify as the frontend host, SQL as source of truth, SignalR/reconnect behavior, environment separation and cutover gates |
 | 5 | [Current frontend → API map](05-current-frontend-api-map.md) | Maps current Firebase-backed actions to server-owned API responsibilities |
-| 6 | [Client Workflow redesign](06-client-workflow-redesign.md) | **Authoritative Phase 5 workflow model:** ClientWorkItems, independent preparation/IRS tracks, work-item assignments, history and work-item-scoped handoffs |
+| 6 | [Client Workflow redesign](06-client-workflow-redesign.md) | **Authoritative Phase 5 workflow model:** ClientWorkItems, independent preparation/IRS tracks, work-item assignments, contact logs, history and work-item-scoped handoffs |
+| 7 | [Verified Netlify transition deploy](07-netlify-transition-deploy.md) | Locks the exact transition frontend hash and safe manual-drop deployment procedure |
 
 ## Current transition baseline
 
 The current frontend behavior specification is the portal supplied on **2026-08-31** and patched only to close the `activeOffice` time-clock synchronization hole.
 
 - Baseline SHA-256: `39f4472ebbbd709672a9ec8d9ebac83c637db72dfeb385781b6fb1fe1bcac3af`
+- The package `index.html` and standalone transition baseline in the working session are byte-identical.
 - The patch makes `fbSavePunch(k)` write `tc/activeOffice/<employee>` along with the employee's active shift and entries.
 - JavaScript syntax validation passes after the patch.
 - A lightweight hash/pointer is kept in [`baseline/OGO_Portal_Transition_Baseline.html`](baseline/OGO_Portal_Transition_Baseline.html).
@@ -35,6 +37,7 @@ The production portal actually tracks one tax **work item** with parallel facts:
 - handoffs transfer a `ClientWorkItemId`, not every matter belonging to a `ClientId`;
 - Owner and Reviewer are work-item assignment ledgers, not name strings;
 - preparation status and IRS status have independent history tracks;
+- client communication activity uses a normalized work-item contact log;
 - a combined headline status is derived for display only.
 
 ## How the documents interlock
@@ -46,6 +49,7 @@ They are meant to be checked against each other, not read in isolation:
 - API/auth/concurrency conventions in **(2)** remain authoritative; workflow resource names are corrected by **(6)** and **(5)**.
 - Every current Firebase write identified in **(5)** must disappear from the final frontend and be replaced by an authenticated record-scoped API operation.
 - **(4)** is the deployment/synchronization contract: Netlify serves the UI, ASP.NET owns business rules, SQL Server is authoritative, and SignalR is an after-commit notification mechanism—not the database.
+- **(7)** records the exact frontend hash allowed for the manual-drop transition site.
 - The newer native handoff workflow is behavior to preserve, not a missing feature to invent.
 
 ## The two questions
@@ -68,11 +72,11 @@ Netlify frontend -> ASP.NET Core 10 API + SignalR -> SQL Server 2025
                                                    -> private object storage
 ```
 
-Deploy previews/rebuild branches must point only to staging API + staging SQL. The browser never receives SQL credentials or other server secrets.
+The current transition site is a manual `drop` deployment. Only an artifact whose `index.html` matches the locked baseline hash may be published during transition. Deploy previews/rebuild branches must point only to staging API + staging SQL. The browser never receives SQL credentials or other server secrets.
 
 ## Migration note
 
-The older Deploy 17 migration map remains useful for discovering legacy constants and data-shape issues, but it is no longer the sole description of production behavior. The current transition baseline has native Client Workflow handoffs and improved per-employee time-clock writes. Documents **(4)**, **(5)** and **(6)** are the current bridge between that frontend and the SQL/API architecture.
+The older Deploy 17 migration map remains useful for discovering legacy constants and data-shape issues, but it is no longer the sole description of production behavior. The current transition baseline has native Client Workflow handoffs and improved per-employee time-clock writes. Documents **(4)** through **(7)** are the current bridge between that frontend and the SQL/API architecture.
 
 ## Scope
 
