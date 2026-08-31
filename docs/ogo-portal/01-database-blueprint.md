@@ -792,7 +792,7 @@ CREATE TABLE [time].TimeEntries (
     InLatitude      decimal(9,6) NULL,
     InLongitude     decimal(9,6) NULL,
     InAccuracyMeters int NULL,
-    InDistanceMeters int NULL,          -- computed server-side vs office geofence
+    InDistanceMeters int NULL,          -- server-computed distance to the MATCHED office
     InGeofenceOk    bit NULL,
     InIpAddress     nvarchar(45) NULL,
     InDeviceId      nvarchar(100) NULL,
@@ -842,6 +842,13 @@ CREATE INDEX IX_TimeEntries_Employee_Period
 CREATE INDEX IX_TimeEntries_Period_Office
     ON [time].TimeEntries(PayPeriodId, OfficeId) INCLUDE (EmployeeId, DurationMinutes);
 ```
+
+**`TimeEntries.OfficeId` is where the punch happened, not where the employee is based.**
+Clock-in matches against *every* active office and records the nearest one inside its
+radius, so staff who cover more than one location clock in wherever they actually are.
+This is why `OfficeId` lives on the punch rather than being read from
+`Employees.PrimaryOfficeId` at report time: "hours worked at the Orlando office" and
+"hours worked by Orlando staff" are different questions, and both are answerable.
 
 **Why `EffectiveClockInUtc` is separate from `ClockInUtc`.** `ClockInUtc` is what the
 server observed and is **never updated after insert**. `EffectiveClockInUtc` is what
@@ -1232,6 +1239,6 @@ These block Phase 1 sign-off. Each needs a human answer, not a default.
 | 2 | **Overtime rule** — daily >8h, weekly >40h, or none? | Needs `PayPeriods`/reporting design before Phase 9 | OGO payroll |
 | 3 | **PTO on termination** — paid out, or forfeited? | Determines whether `TransactionType 6` is used | OGO HR |
 | 4 | **Handoff expiry** — do pending handoffs auto-expire, and after how long? | `ExpiresAtUtc` default; a client with an ignored handoff is stuck otherwise | Gina |
-| 5 | **Geofence enforcement** — hard block, or allow with a flag for review? | Deploy 17 hard-blocks; a bad GPS fix then costs someone their punch | Gina |
+| 5 | **Geofence enforcement** — hard block, or allow with a flag for review? | Deploy 17 hard-blocks; a bad GPS fix then costs someone their punch. *(Settled separately: proximity to **any** office is sufficient — see API blueprint §6.1)* | Gina |
 | 6 | **Tax year on workflow** — is `(Client, TaxYear)` the right grain, or does a client have several concurrent engagements? | Changes the `UX_CliWf_ClientYear` unique constraint | Alex Rivera |
 | 7 | **Client numbering** — reuse TaxDome IDs, or mint our own? | `ClientNumber` uniqueness and the TaxDome sync story | OGO ops |

@@ -651,7 +651,7 @@ function makeDefault(){
     activity:[{id:451,text:'Portal initialized.',actor:'System',office:'All',ts:Date.now()}],
     rsvps:{},
     inbox:{},
-    tc:{entries:{},active:{}},
+    tc:{entries:{},active:{},activeOffice:{}},
     analytics:{monthlyReturns:[42,51,49,63,58,71],months:['Jan','Feb','Mar','Apr','May','Jun']},
     ptoOverrides:{},
     rosterSync:'',
@@ -733,6 +733,7 @@ function fbMerge(remote){
   if(!S.tc||typeof S.tc!=='object')S.tc={entries:{},active:{}};
   if(!S.tc.entries)S.tc.entries={};
   if(!S.tc.active)S.tc.active={};
+  if(!S.tc.activeOffice)S.tc.activeOffice={};
   if(!S.inbox)S.inbox={};
   fbLock=false;
   renderAll();
@@ -770,15 +771,30 @@ function currPP(){const n=new Date();return getPPs().find(function(p){return n>=
 
 /* ── GEOFENCING ── */
 function distM(la1,lo1,la2,lo2){const R=6371000,d1=(la2-la1)*Math.PI/180,d2=(lo2-lo1)*Math.PI/180;const a=Math.sin(d1/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(d2/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+function fmtDist(d){return d<1000?d+'m':(d/1000).toFixed(1)+'km';}
+/* Nearest OGO office to the current position, regardless of which office the
+   employee is assigned to. Staff who cover multiple offices can clock in at
+   whichever one they are actually standing in. */
+function nearestOffice(){
+  if(geoLat==null||geoLng==null)return null;
+  var best=null;
+  Object.keys(GEO).forEach(function(name){
+    var g=GEO[name];
+    var d=Math.round(distM(geoLat,geoLng,g.lat,g.lng));
+    if(!best||d<best.dist)best={office:name,dist:d,radius:g.r};
+  });
+  return best;
+}
 function checkGeo(){
-  if(!CU)return{ok:false,msg:'Not signed in'};
-  if(CU.role==='Admin')return{ok:true,msg:'Admin \u2014 clock in from anywhere \u2713'};
-  const g=GEO[CU.office];if(!g)return{ok:true,msg:'Office not configured'};
-  if(!geoChecked)return{ok:false,msg:'Checking your location...'};
-  if(!geoLat)return{ok:true,msg:'Location unavailable \u2014 contact admin'};
-  const d=Math.round(distM(geoLat,geoLng,g.lat,g.lng));
-  if(d<=g.r)return{ok:true,msg:'\u2713 At '+CU.office+' office ('+d+'m)'};
-  return{ok:false,msg:'Too far from '+CU.office+' ('+d+'m away, max '+g.r+'m)'};
+  if(!CU)return{ok:false,msg:'Not signed in',office:null};
+  if(CU.role==='Admin')return{ok:true,msg:'Admin \u2014 clock in from anywhere \u2713',office:CU.office};
+  if(!Object.keys(GEO).length)return{ok:true,msg:'No offices configured',office:CU.office};
+  if(!geoChecked)return{ok:false,msg:'Checking your location...',office:null};
+  if(geoLat==null)return{ok:true,msg:'Location unavailable \u2014 contact admin',office:CU.office};
+  var n=nearestOffice();
+  if(!n)return{ok:false,msg:'Unable to determine location',office:null};
+  if(n.dist<=n.radius)return{ok:true,msg:'\u2713 At '+n.office+' office ('+fmtDist(n.dist)+')',office:n.office,dist:n.dist};
+  return{ok:false,msg:'Too far from any OGO office \u2014 nearest is '+n.office+' ('+fmtDist(n.dist)+' away, must be within '+fmtDist(n.radius)+')',office:null,dist:n.dist};
 }
 function startGeo(){
   if(!navigator.geolocation){geoChecked=true;updateGeoUI();return;}
@@ -814,18 +830,21 @@ function handleClock(){
     const dur=now-ic;
     if(!S.tc.entries)S.tc.entries={};
     if(!S.tc.entries[k])S.tc.entries[k]=[];
+    const punchOffice=(S.tc.activeOffice&&S.tc.activeOffice[k])||me.office;
     S.tc.entries[k].push({
       id:now+'_'+k,
       date:ldate(ic),
       clockIn:ic,
       clockOut:now,
       duration:dur,
-      office:me.office,
+      office:punchOffice,
+      homeOffice:me.office,
       manual:false
     });
     delete S.tc.active[k];
+    if(S.tc.activeOffice)delete S.tc.activeOffice[k];
     const coTime=new Date(now).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-    addLog(me.name+' clocked OUT at '+coTime+' \u2014 '+fhm(dur)+' logged.',me.office,me.name);
+    addLog(me.name+' clocked OUT at '+coTime+' \u2014 '+fhm(dur)+' logged.'+(punchOffice!==me.office?' ('+punchOffice+' office)':''),punchOffice,me.name);
     fbSave();
     stopSessionTimer();
     renderTC();
@@ -833,9 +852,12 @@ function handleClock(){
   }else{
     /* CLOCK IN — record exact timestamp now */
     if(!S.tc.active)S.tc.active={};
+    if(!S.tc.activeOffice)S.tc.activeOffice={};
     S.tc.active[k]=now;
+    S.tc.activeOffice[k]=g.office||me.office;
     const ciTime=new Date(now).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-    addLog(me.name+' clocked IN at '+ciTime+'.',me.office,me.name);
+    const inOffice=S.tc.activeOffice[k];
+    addLog(me.name+' clocked IN at '+ciTime+'.'+(inOffice!==me.office?' ('+inOffice+' office)':''),inOffice,me.name);
     fbSave();
     startSessionTimer();
     renderTC();

@@ -408,7 +408,8 @@ employees. That equality is the Phase 8 gate.
 | `clockOut` (ms epoch) | `ClockOutUtc`, `EffectiveClockOutUtc` | Same |
 | `duration` (ms) | *(recomputed)* | `DurationMinutes` is computed. **Verify** it matches `duration/60000` and report any mismatch |
 | `date` (`YYYY-MM-DD`) | `WorkDateLocal` | ⚠️ Deploy 17 uses `ldate(ic)` — the **local date of the browser that wrote it**. Recompute from `ClockInUtc` + office tz; log differences |
-| `office` | `OfficeId` | Name lookup |
+| `office` | `OfficeId` | Name lookup. ⚠️ **Meaning changed mid-life.** Before the multi-office geofence fix this was the employee's *home* office; after it, the office they actually clocked in at. Punches carrying `homeOffice` are post-fix and their `office` is a verified location; those without it are pre-fix and are only an assumption |
+| `homeOffice` | *(cross-check)* | Post-fix punches only. Where it differs from `office`, the employee worked at another location — expected, not an error |
 | `manual` | `EntrySource` | `true`→2, `false`→3 (Migrated). **No migrated punch is `EntrySource=1`** |
 | `notes` | `Note` | Direct |
 | — | `PayPeriodId` | Assigned from generated historical periods (§7.1) |

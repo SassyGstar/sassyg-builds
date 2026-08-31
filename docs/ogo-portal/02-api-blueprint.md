@@ -351,10 +351,13 @@ when.
 The handler:
 
 1. Resolves `EmployeeId` **from the session cookie**.
-2. Loads the employee's office, computes haversine distance server-side against
-   `Offices.Latitude/Longitude/GeofenceRadiusMeters` — the browser's opinion about
-   whether it is inside the fence is not consulted.
-3. Inserts with `EntrySource = 1`, `ClockInUtc = EffectiveClockInUtc = SYSUTCDATETIME()`.
+2. Computes haversine distance server-side against **every active office**, and takes
+   the nearest one within its own `GeofenceRadiusMeters`. Staff are not restricted to
+   their assigned office — an employee covering a second location clocks in there
+   normally. The browser's opinion about whether it is inside a fence is not consulted.
+3. Inserts with `EntrySource = 1`, `ClockInUtc = EffectiveClockInUtc = SYSUTCDATETIME()`,
+   and **`OfficeId` = the office actually matched**, which may differ from the employee's
+   `PrimaryOfficeId`.
 4. Derives `WorkDateLocal` from the office time zone.
 5. Assigns `PayPeriodId` from the open period covering that date.
 
@@ -365,7 +368,8 @@ The handler:
   "clockInUtc": "2026-08-31T13:03:11.442Z",
   "clockInLocal": "2026-08-31T09:03:11.442-04:00",
   "office": { "code": "ORL", "name": "Orlando" },
-  "geofence": { "ok": true, "distanceMeters": 41, "radiusMeters": 500 }
+  "homeOffice": { "code": "CLR", "name": "Clermont" },
+  "geofence": { "ok": true, "matchedOffice": "Orlando", "distanceMeters": 41, "radiusMeters": 500 }
 }
 ```
 
@@ -377,7 +381,7 @@ Double-tapping the button is harmless.
 
 | Endpoint | Permission | Notes |
 |---|---|---|
-| `POST /timeclock/clock-out` | `TimeClock.Own` | Server time again. Fails `409` if no open entry |
+| `POST /timeclock/clock-out` | `TimeClock.Own` | Server time again. Fails `409` if no open entry. The punch keeps the office matched at **clock-in**, so a mid-shift trip between offices cannot re-attribute the hours |
 | `GET /timeclock/me` | `TimeClock.Own` | Open entry + today's total + current period total |
 | `GET /timeclock/entries?employeeId&payPeriodId` | `TimeClock.Review` | Office-scoped |
 | `POST /timeclock/entries` | `TimeClock.Correct` | Manager manual entry. `EntrySource = 2`, `CreatedByEmployeeId` set. Reason required |
@@ -476,7 +480,8 @@ edited independently of the resource it protects. **Bytes never transit the API.
 talks to object storage directly; the API only ever handles metadata and permission.
 
 **Offices & lookups** — `GET /offices`, `GET/PUT /offices/{id}` (`System.Manage`),
-`GET/POST /offices/{id}/notes`, `GET /lookups/workflow-stages`,
+`GET/POST /offices/{id}/notes`, `GET /lookups/offices` (name, code, coordinates and radius — the clock-in screen needs
+every office, not just the employee's own), `GET /lookups/workflow-stages`,
 `GET/POST/PUT /admin/workflow-stages` (`System.Manage`),
 `GET/POST/PUT /admin/pto-policies` (`PTO.AdjustBalance`).
 Editing an office's geofence is `System.Manage`, not `Employee.Manage` — moving a fence
