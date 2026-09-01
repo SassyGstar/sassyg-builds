@@ -660,9 +660,9 @@ button,input,select,textarea{font:inherit}
    All data lives in state.tc inside Firebase. One path.
    ═══════════════════════════════════════════════════════════ */
 
-const FB_CONFIG={apiKey:'AIzaSyDJZ4l6atbPUl2nhFVtD2-oVT3CYwyr7ws',authDomain:'ogo-bulletin-board.firebaseapp.com',databaseURL:'https://ogo-bulletin-board-default-rtdb.firebaseio.com',projectId:'ogo-bulletin-board',storageBucket:'ogo-bulletin-board.firebasestorage.app',messagingSenderId:'962245256225',appId:'1:962245256225:web:5069a53792ad8ba58e6f60'};
+const FB_CONFIG={apiKey:'YOUR_FIREBASE_API_KEY',authDomain:'your-project.firebaseapp.com',databaseURL:'https://your-project-default-rtdb.firebaseio.com',projectId:'your-project',storageBucket:'your-project.firebasestorage.app',messagingSenderId:'YOUR_SENDER_ID',appId:'YOUR_APP_ID'};
 const FB_PATH='portals/ogo-v6-final/state';
-const ADMIN_PW='OGO2026';
+const ADMIN_PW='DEMO1234'; /* SANITIZED: never commit the live passcode. Replaced by server-side auth in P0. */
 const PIN_KEY='ogo_pins_v6f';
 const USER_KEY='ogo_user_v6f';
 
@@ -729,16 +729,16 @@ function getPTOUsed(name){
 const GEO={Orlando:{lat:28.4842556,lng:-81.4575523,r:500},Clermont:{lat:28.5488526,lng:-81.7283544,r:500},'Winter Haven':{lat:28.0216089,lng:-81.7333756,r:500}};
 
 const EMPLOYEES=[
-  {id:1,name:'LeBrun Alexis',bday:'1979-01-22',hireDate:'2017-02-17',phone:'(407) 924-8796',email:'lebrun@ogofin.com',pos:'CEO',office:'Orlando',status:'Active'},
-  {id:2,name:'Vestin Paul',bday:'1981-12-30',hireDate:'2025-07-01',phone:'(863) 350-6177',email:'jeanvpaul@gmail.com',pos:'Branch Manager',office:'Winter Haven',status:'Active'},
-  {id:3,name:'Brandy Alexis',bday:'1993-04-18',hireDate:'2025-06-02',phone:'(407) 247-8021',email:'brandy@ogofin.com',pos:'Head Marketing',office:'Orlando',status:'Active'},
-  {id:4,name:'Berline Jolimer',bday:'1980-04-11',hireDate:'2025-07-01',phone:'(407) 272-1097',email:'berlined@yahoo.com',pos:'Human Resources',office:'Orlando',status:'Active'},
-  {id:5,name:'Gina Altidor',bday:'1981-04-30',hireDate:'2018-01-01',phone:'(407) 545-1914',email:'gina@ogofin.com',pos:'Tax Resolution Director',office:'Orlando',status:'Active'},
-  {id:6,name:'Frances Torres',bday:'2003-09-02',hireDate:'2025-03-28',phone:'(787) 944-5063',email:'frances@ogofin.com',pos:'Team Lead',office:'Clermont',status:'Active'},
-  {id:8,name:'Bianca Sanchez',bday:'1988-05-23',hireDate:'2025-10-09',phone:'(786) 663-8780',email:'bianca_luna02@aol.com',pos:'Administrative Assistant',office:'Clermont',status:'Active'},
-  {id:9,name:'Clariluz Graham',bday:'1990-10-19',hireDate:'2025-11-19',phone:'(305) 479-8923',email:'clariluz@truetypeinc.com',pos:'Administrative Assistant',office:'Winter Haven',status:'Active'},
-  {id:10,name:'Giovanni LeBrun Alexis',bday:'2002-12-17',hireDate:'2024-12-02',phone:'(407) 341-1141',email:'giovannilalexis17@gmail.com',pos:'Bookkeeping',office:'Orlando',status:'Active'},
-  {id:11,name:'Maria Nino',bday:'2003-12-10',hireDate:'',phone:'(786) 382-3196',email:'marialenb12@gmail.com',pos:'Marketing Specialist',office:'Clermont',status:'Active'}
+  {id:1,name:'LeBrun Alexis',bday:'',hireDate:'2017-02-17',phone:'',email:'lebrun@ogofin.com',pos:'CEO',office:'Orlando',status:'Active'},
+  {id:2,name:'Vestin Paul',bday:'',hireDate:'2025-07-01',phone:'',email:'',pos:'Branch Manager',office:'Winter Haven',status:'Active'},
+  {id:3,name:'Brandy Alexis',bday:'',hireDate:'2025-06-02',phone:'',email:'brandy@ogofin.com',pos:'Head Marketing',office:'Orlando',status:'Active'},
+  {id:4,name:'Berline Jolimer',bday:'',hireDate:'2025-07-01',phone:'',email:'',pos:'Human Resources',office:'Orlando',status:'Active'},
+  {id:5,name:'Gina Altidor',bday:'',hireDate:'2018-01-01',phone:'',email:'gina@ogofin.com',pos:'Tax Resolution Director',office:'Orlando',status:'Active'},
+  {id:6,name:'Frances Torres',bday:'',hireDate:'2025-03-28',phone:'',email:'frances@ogofin.com',pos:'Team Lead',office:'Clermont',status:'Active'},
+  {id:8,name:'Bianca Sanchez',bday:'',hireDate:'2025-10-09',phone:'',email:'',pos:'Administrative Assistant',office:'Clermont',status:'Active'},
+  {id:9,name:'Clariluz Graham',bday:'',hireDate:'2025-11-19',phone:'',email:'',pos:'Administrative Assistant',office:'Winter Haven',status:'Active'},
+  {id:10,name:'Giovanni LeBrun Alexis',bday:'',hireDate:'2024-12-02',phone:'',email:'',pos:'Bookkeeping',office:'Orlando',status:'Active'},
+  {id:11,name:'Maria Nino',bday:'',hireDate:'',phone:'',email:'',pos:'Marketing Specialist',office:'Clermont',status:'Active'}
 ];
 
 function makeDefault(){
