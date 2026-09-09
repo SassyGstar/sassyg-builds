@@ -194,19 +194,51 @@ button,input,select,textarea{font:inherit}
 .rsvp-btn.sel-going{background:#e5f5ea;color:#216838;border-color:#b9e0c5}
 .rsvp-btn.sel-maybe{background:#fbefdd;color:#7f5210;border-color:#edd39f}
 .rsvp-btn.sel-no{background:#fdeeee;color:#8b3232;border-color:#efc1c1}
-/* POTLUCK */
-.pl-banner{padding:12px;border-radius:14px;background:linear-gradient(180deg,#fff,#EEF5F7);border:1px solid rgba(184,150,62,.28);margin-bottom:12px}
-.pl-when{font-size:13px;font-weight:800;color:var(--navy);line-height:1.35}
+/* POTLUCK — FALL HARVEST THEME */
+#potluckCard{
+  --pl-rust:#8C3A16;--pl-pumpkin:#C4611C;--pl-amber:#D98324;--pl-gold:#E0A03A;
+  --pl-cranberry:#95312F;--pl-moss:#6E7B36;--pl-cream:#FFF7EA;--pl-edge:#EAC194;
+  background:linear-gradient(165deg,#FFFAF2 0%,#FDF0DF 55%,#F9E3CB 100%);
+  border:1px solid var(--pl-edge);
+  box-shadow:0 12px 30px rgba(140,58,22,.16);
+  overflow:hidden;position:relative
+}
+#potluckCard::before{content:'';position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg,var(--pl-rust),var(--pl-pumpkin) 30%,var(--pl-gold) 60%,var(--pl-moss))}
+#potluckCard .card-head{background:linear-gradient(100deg,var(--pl-rust),var(--pl-pumpkin) 55%,var(--pl-amber));border-bottom:1px solid var(--pl-edge);padding-top:14px}
+#potluckCard .card-title{color:#FFF3E2;letter-spacing:.2px;text-shadow:0 1px 1px rgba(0,0,0,.18)}
+#potluckCard .card-title .icon{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);font-size:15px}
+#potluckCard .btn-sm{background:rgba(255,255,255,.95);color:var(--pl-rust);border-color:rgba(255,255,255,.7);font-weight:800}
+#potluckCard .btn-sm:hover{background:#fff;color:#5E240D}
+.pl-banner{padding:13px;border-radius:16px;background:linear-gradient(180deg,var(--pl-cream),#FCEBD6);border:1px dashed var(--pl-amber);margin-bottom:12px;position:relative}
+.pl-banner::after{content:'\1F342';position:absolute;right:12px;top:10px;font-size:22px;opacity:.5}
+.pl-when{font-size:14px;font-weight:800;color:var(--pl-rust);line-height:1.35;padding-right:30px}
+.pl-banner .meta{color:#6B4A2E}
+.pl-banner .chip{background:#F6DCBB;color:var(--pl-rust)}
+.pl-banner .chip.today{background:#E9F1DC;color:#4C5726}
+.pl-banner .chip.soon{background:#FBE3C2;color:#8C3A16}
+.pl-banner .chip.past{background:#F0DBDB;color:#7A2A28}
 .pl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
-.pl-col{background:#F7F9FA;border:1px solid var(--ln);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:7px}
+.pl-col{background:rgba(255,255,255,.86);border:1px solid var(--pl-edge);border-top:4px solid var(--pl-accent,#D98324);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:7px}
+.pl-col.pl-c0{--pl-accent:#8C3A16}
+.pl-col.pl-c1{--pl-accent:#95312F}
+.pl-col.pl-c2{--pl-accent:#C4611C}
+.pl-col.pl-c3{--pl-accent:#E0A03A}
+.pl-col.pl-c4{--pl-accent:#6E7B36}
 .pl-col-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
-.pl-cat{font-size:11px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.6px}
-.pl-count{font-size:10px;font-weight:800;color:var(--navy);background:var(--glt);border-radius:999px;padding:2px 7px}
-.pl-item{background:#fff;border:1px solid var(--ln);border-radius:12px;padding:8px;display:flex;gap:7px;align-items:flex-start}
-.pl-item.pl-mine{border-color:rgba(184,150,62,.55);box-shadow:0 0 0 2px rgba(184,150,62,.1)}
-.pl-av{width:26px;height:26px;border-radius:50%;background:var(--navy);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex:0 0 auto}
-.pl-name{font-size:11px;font-weight:800;color:var(--navy)}
-.pl-what{font-size:11px;color:var(--mu);line-height:1.4;margin-top:2px}
+.pl-cat{font-size:11px;font-weight:800;color:var(--pl-accent);text-transform:uppercase;letter-spacing:.6px}
+.pl-count{font-size:10px;font-weight:800;color:#fff;background:var(--pl-accent);border-radius:999px;padding:2px 8px;min-width:22px;text-align:center}
+.pl-col .ic-btn{border-color:var(--pl-edge);color:var(--pl-rust);font-weight:800}
+.pl-col .ic-btn:hover{background:#FBE7CD}
+.pl-col .meta{color:#7A6248}
+.pl-item{background:#fff;border:1px solid #F0DCC2;border-radius:12px;padding:8px;display:flex;gap:7px;align-items:flex-start}
+.pl-item.pl-mine{border-color:var(--pl-accent);box-shadow:0 0 0 2px rgba(196,97,28,.14)}
+.pl-av{width:26px;height:26px;border-radius:50%;background:var(--pl-accent);color:#FFF3E2;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex:0 0 auto}
+.pl-name{font-size:11px;font-weight:800;color:var(--navy);line-height:1.3}
+.pl-acts{display:flex;justify-content:flex-end;gap:4px;margin-top:5px}
+.pl-acts .ic-btn{padding:2px 6px;font-size:10px;line-height:1.4}
+.pl-what{font-size:11px;color:#6B4A2E;font-weight:600;line-height:1.4;margin-top:2px}
+.pl-item .meta{color:#93795E}
+
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;padding:14px;z-index:30}
 .modal-overlay.open{display:flex}
@@ -385,7 +417,7 @@ button,input,select,textarea{font:inherit}
             </div>
             <div class="card s12" id="potluckCard">
               <div class="card-head">
-                <div class="card-title"><div class="icon">&#127860;</div>Potluck Sign-Up</div>
+                <div class="card-title"><div class="icon">&#127809;</div>Potluck Sign-Up &#127810;</div>
                 <div class="had">
                   <button class="btn-sm" onclick="addPotluck('')">&#127869; I'm Bringing Something</button>
                   <button class="btn-sm" id="plEditBtn" style="display:none" onclick="editPotluckInfo()">&#9998; Edit Details</button>
@@ -684,8 +716,8 @@ function makeDefault(){
       office:'All',
       blurb:'Bring your favorite dish and your appetite! Whether it\u2019s sweet, savory, homemade, or picked up from your favorite restaurant, every contribution is welcome. Let\u2019s enjoy great food and great company.',
       signups:[
-        {id:801,cat:'Main Dish',item:'Lasagna',note:'',name:'Gina',empId:0,ts:0},
-        {id:802,cat:'Main Dish',item:'BBQ ribs & rice',note:'',name:'Berline',empId:0,ts:0}
+        {id:801,cat:'Main Dish',item:'Lasagna',note:'',name:'Jordan Blake',empId:1,ts:0},
+        {id:802,cat:'Main Dish',item:'BBQ ribs & rice',note:'',name:'Morgan Reyes',empId:2,ts:0}
       ]
     },
     inbox:{},
@@ -1287,7 +1319,8 @@ const PL_ICON={'Main Dish':'🍗',Dessert:'🍰',Condiments:'🥫',Drinks:'🥤'
 const PL_HINT={'Main Dish':'Entrées, meats, pasta, rice, hot dishes',Dessert:'Cakes, cookies, pies, sweets',Condiments:'Sauces, dressings, plates, cups, napkins, utensils',Drinks:'Soda, juice, water, sweet tea, coffee',Other:'Sides, salads, bread — or anything else, write it in'};
 function plInfo(){if(!S.potluck||typeof S.potluck!=='object'||Array.isArray(S.potluck))S.potluck=makeDefault().potluck;if(!Array.isArray(S.potluck.signups))S.potluck.signups=[];return S.potluck;}
 function plMe(){return S.employees.find(function(e){return e.name===(CU?CU.name:'');});}
-function plCanEdit(s){if(S.adminMode)return true;const me=plMe();if(me&&Number(s.empId)===Number(me.id))return true;return!!(CU&&s.name===CU.name);}
+function plIsMine(s){const me=plMe();if(me&&Number(s.empId)===Number(me.id))return true;return!!(CU&&s.name===CU.name);}
+function plCanEdit(s){return S.adminMode||plIsMine(s);}
 function renderPotluck(){
   const card=document.getElementById('potluckCard');if(!card)return;
   const p=plInfo();
@@ -1299,21 +1332,21 @@ function renderPotluck(){
     (p.blurb?'<div class="meta">'+esc(p.blurb)+'</div>':'')+
     '<div class="chips"><span class="chip '+bCls+'">'+bTxt+'</span>'+
     (p.location?'<span class="chip">📍 '+esc(p.location)+'</span>':'')+
-    '<span class="chip" style="background:#eaf1fd;color:#234f97">'+esc(p.office||'All')+'</span>'+
-    '<span class="chip">'+p.signups.length+' signed up</span></div>';
+    '<span class="chip">'+esc(p.office==='All'?'All Offices':p.office||'All')+'</span>'+
+    '<span class="chip" style="background:#8C3A16;color:#FFF3E2">'+p.signups.length+' signed up</span></div>';
   const g=document.getElementById('potluckGrid');if(!g)return;
-  g.innerHTML=PL_CATS.map(function(cat){
+  g.innerHTML=PL_CATS.map(function(cat,ci){
     const rows=p.signups.filter(function(s){return s.cat===cat;});
-    return'<div class="pl-col">'+
+    return'<div class="pl-col pl-c'+ci+'">'+
       '<div class="pl-col-head"><div class="pl-cat">'+PL_ICON[cat]+' '+esc(cat)+'</div>'+
       '<div style="display:flex;gap:5px;align-items:center"><span class="pl-count">'+rows.length+'</span>'+
       '<button class="ic-btn" title="Sign up for '+esc(cat)+'" onclick="addPotluck(\''+cat+'\')">+</button></div></div>'+
       '<div class="meta" style="margin-top:0">'+esc(PL_HINT[cat])+'</div>'+
       (rows.length?rows.map(function(s){
-        const mine=plCanEdit(s);
+        const mine=plIsMine(s),can=plCanEdit(s);
         return'<div class="pl-item'+(mine?' pl-mine':'')+'"><div class="pl-av">'+ini(s.name)+'</div>'+
-          '<div style="flex:1;min-width:0"><div class="pl-name">'+esc(s.name)+'</div><div class="pl-what">'+esc(s.item)+'</div>'+(s.note?'<div class="meta">'+esc(s.note)+'</div>':'')+'</div>'+
-          (mine?'<div class="actions" style="gap:4px"><button class="ic-btn" style="padding:4px 6px;font-size:11px" onclick=\'editPotluck('+JSON.stringify(s).replace(/'/g,"&#39;")+')\'>&#9998;</button><button class="ic-btn" style="padding:4px 6px;font-size:11px" onclick="deletePotluck('+s.id+')">&#10005;</button></div>':'')+
+          '<div style="flex:1;min-width:0"><div class="pl-name">'+esc(s.name)+(mine?' \u2605':'')+'</div><div class="pl-what">'+esc(s.item)+'</div>'+(s.note?'<div class="meta">'+esc(s.note)+'</div>':'')+
+          (can?'<div class="pl-acts"><button class="ic-btn" onclick=\'editPotluck('+JSON.stringify(s).replace(/'/g,"&#39;")+')\'>&#9998;</button><button class="ic-btn" onclick="deletePotluck('+s.id+')">&#10005;</button></div>':'')+'</div>'+
         '</div>';
       }).join(''):'<div class="empty" style="padding:10px 0">Open — be the first!</div>')+
     '</div>';
