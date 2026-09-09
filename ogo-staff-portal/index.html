@@ -194,6 +194,19 @@ button,input,select,textarea{font:inherit}
 .rsvp-btn.sel-going{background:#e5f5ea;color:#216838;border-color:#b9e0c5}
 .rsvp-btn.sel-maybe{background:#fbefdd;color:#7f5210;border-color:#edd39f}
 .rsvp-btn.sel-no{background:#fdeeee;color:#8b3232;border-color:#efc1c1}
+/* POTLUCK */
+.pl-banner{padding:12px;border-radius:14px;background:linear-gradient(180deg,#fff,#EEF5F7);border:1px solid rgba(184,150,62,.28);margin-bottom:12px}
+.pl-when{font-size:13px;font-weight:800;color:var(--navy);line-height:1.35}
+.pl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
+.pl-col{background:#F7F9FA;border:1px solid var(--ln);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:7px}
+.pl-col-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.pl-cat{font-size:11px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.6px}
+.pl-count{font-size:10px;font-weight:800;color:var(--navy);background:var(--glt);border-radius:999px;padding:2px 7px}
+.pl-item{background:#fff;border:1px solid var(--ln);border-radius:12px;padding:8px;display:flex;gap:7px;align-items:flex-start}
+.pl-item.pl-mine{border-color:rgba(184,150,62,.55);box-shadow:0 0 0 2px rgba(184,150,62,.1)}
+.pl-av{width:26px;height:26px;border-radius:50%;background:var(--navy);color:var(--gold);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex:0 0 auto}
+.pl-name{font-size:11px;font-weight:800;color:var(--navy)}
+.pl-what{font-size:11px;color:var(--mu);line-height:1.4;margin-top:2px}
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(17,24,39,.45);display:none;align-items:center;justify-content:center;padding:14px;z-index:30}
 .modal-overlay.open{display:flex}
@@ -216,7 +229,7 @@ button,input,select,textarea{font:inherit}
   .layout,.hero,.dir-grid,.res-grid,.req-grid{grid-template-columns:1fr}
   .g{grid-template-columns:1fr 1fr}
   .s8,.s4,.s6,.s12{grid-column:span 2}
-  .metric-grid,.kpis,.tc-grid,.pp-stats{grid-template-columns:repeat(2,1fr)}
+  .metric-grid,.kpis,.tc-grid,.pp-stats,.pl-grid{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:768px){
   .wrap{padding:8px 8px 90px}
@@ -225,7 +238,7 @@ button,input,select,textarea{font:inherit}
   .hactions{align-items:flex-start}
   .g{grid-template-columns:1fr}
   .s8,.s4,.s6,.s12{grid-column:span 1}
-  .metric-grid,.kpis,.login-grid,.tc-grid,.pp-stats{grid-template-columns:1fr}
+  .metric-grid,.kpis,.login-grid,.tc-grid,.pp-stats,.pl-grid{grid-template-columns:1fr}
   .dir-grid,.res-grid,.req-grid{grid-template-columns:1fr}
   .sidebar{display:none}
   .mob-nav{position:fixed;left:0;right:0;bottom:0;padding:8px;background:rgba(255,255,255,.97);backdrop-filter:blur(12px);display:grid;grid-template-columns:repeat(5,1fr);gap:5px;border-top:1px solid var(--ln);z-index:20}
@@ -369,6 +382,19 @@ button,input,select,textarea{font:inherit}
             <div class="card s6">
               <div class="card-head"><div class="card-title"><div class="icon">&#9989;</div>Action Items</div></div>
               <div style="padding:14px"><div class="list" id="todoList"></div></div>
+            </div>
+            <div class="card s12" id="potluckCard">
+              <div class="card-head">
+                <div class="card-title"><div class="icon">&#127860;</div>Potluck Sign-Up</div>
+                <div class="had">
+                  <button class="btn-sm" onclick="addPotluck('')">&#127869; I'm Bringing Something</button>
+                  <button class="btn-sm" id="plEditBtn" style="display:none" onclick="editPotluckInfo()">&#9998; Edit Details</button>
+                </div>
+              </div>
+              <div style="padding:14px">
+                <div class="pl-banner" id="potluckBanner"></div>
+                <div class="pl-grid" id="potluckGrid"></div>
+              </div>
             </div>
             <div class="card s12">
               <div class="card-head"><div class="card-title"><div class="icon">&#128276;</div>Notifications</div></div>
@@ -650,6 +676,18 @@ function makeDefault(){
     notifications:[{id:401,text:'OGO Portal is live! All data syncs across every device in real time.',scope:'All',createdAt:Date.now()}],
     activity:[{id:451,text:'Portal initialized.',actor:'System',office:'All',ts:Date.now()}],
     rsvps:{},
+    potluck:{
+      title:'OGO Employees Potluck',
+      date:'2026-11-19',
+      time:'11:00 AM',
+      location:'',
+      office:'All',
+      blurb:'Bring your favorite dish and your appetite! Whether it\u2019s sweet, savory, homemade, or picked up from your favorite restaurant, every contribution is welcome. Let\u2019s enjoy great food and great company.',
+      signups:[
+        {id:801,cat:'Main Dish',item:'Lasagna',note:'',name:'Gina',empId:0,ts:0},
+        {id:802,cat:'Main Dish',item:'BBQ ribs & rice',note:'',name:'Berline',empId:0,ts:0}
+      ]
+    },
     inbox:{},
     tc:{entries:{},active:{}},
     analytics:{monthlyReturns:[42,51,49,63,58,71],months:['Jan','Feb','Mar','Apr','May','Jun']},
@@ -734,6 +772,10 @@ function fbMerge(remote){
   if(!S.tc.entries)S.tc.entries={};
   if(!S.tc.active)S.tc.active={};
   if(!S.inbox)S.inbox={};
+  /* ensure potluck exists / has every field */
+  const plD=makeDefault().potluck;
+  if(!S.potluck||typeof S.potluck!=='object'||Array.isArray(S.potluck))S.potluck=plD;
+  else{Object.keys(plD).forEach(function(k){if(S.potluck[k]===undefined)S.potluck[k]=plD[k];});if(!Array.isArray(S.potluck.signups))S.potluck.signups=[];}
   fbLock=false;
   renderAll();
 }
@@ -1210,8 +1252,8 @@ function renderDash(){
   if(kg){const emps=S.employees.filter(function(e){return o==='All'||e.office===o;}).length,evts=S.events.filter(vo).length,tasks=S.todos.filter(vo).filter(function(t){return!t.done;}).length,clients=(S.clients||[]).filter(vo).length;
     kg.innerHTML='<div class="kpi"><div class="k-lbl">Employees</div><div class="k-val">'+emps+'</div></div><div class="kpi"><div class="k-lbl">Events</div><div class="k-val">'+evts+'</div></div><div class="kpi"><div class="k-lbl">Open Tasks</div><div class="k-val">'+tasks+'</div></div><div class="kpi"><div class="k-lbl">Clients</div><div class="k-val">'+clients+'</div></div>';}
   const al=document.getElementById('alertsList');
-  if(al){const items=[];const soon=S.events.filter(vo).filter(function(e){const d=du(e.date);return d>=0&&d<=7;});if(soon.length)items.push('\uD83D\uDCC5 '+soon.length+' event'+(soon.length>1?'s':'')+' within 7 days.');const bm=S.employees.filter(function(e){return e.bday&&new Date(e.bday+'T00:00:00').getMonth()===new Date().getMonth()&&(o==='All'||e.office===o);});if(bm.length)items.push('\uD83C\uDF82 '+bm.length+' birthday'+(bm.length>1?'s':'')+' this month!');const pend=(S.requests||[]).filter(vo).filter(function(r){return r.status==='Pending';});if(pend.length)items.push('\uD83D\uDCDD '+pend.length+' pending request'+(pend.length>1?'s':'')+' awaiting review.');al.innerHTML=items.length?items.map(function(t){return'<div class="alert-item">'+t+'</div>';}).join(''):'<div class="empty">All clear \u2014 no alerts.</div>';}
-  renderEventsList();renderBdays();renderAnns();renderTodos();renderNotifs();
+  if(al){const items=[];const soon=S.events.filter(vo).filter(function(e){const d=du(e.date);return d>=0&&d<=7;});if(soon.length)items.push('\uD83D\uDCC5 '+soon.length+' event'+(soon.length>1?'s':'')+' within 7 days.');const bm=S.employees.filter(function(e){return e.bday&&new Date(e.bday+'T00:00:00').getMonth()===new Date().getMonth()&&(o==='All'||e.office===o);});if(bm.length)items.push('\uD83C\uDF82 '+bm.length+' birthday'+(bm.length>1?'s':'')+' this month!');const pend=(S.requests||[]).filter(vo).filter(function(r){return r.status==='Pending';});if(pend.length)items.push('\uD83D\uDCDD '+pend.length+' pending request'+(pend.length>1?'s':'')+' awaiting review.');const pl=plInfo();const pd=du(pl.date);if(vo(pl)&&pd>=0&&pd<=14)items.push('\uD83C\uDF7D\uFE0F Potluck '+(pd===0?'today':'in '+pd+' day'+(pd>1?'s':''))+' \u00B7 '+pl.signups.length+' signed up \u2014 add what you\u2019re bringing!');al.innerHTML=items.length?items.map(function(t){return'<div class="alert-item">'+t+'</div>';}).join(''):'<div class="empty">All clear \u2014 no alerts.</div>';}
+  renderEventsList();renderBdays();renderAnns();renderPotluck();renderTodos();renderNotifs();
 }
 function renderEventsList(){
   const el=document.getElementById('eventsList');if(!el)return;
@@ -1239,6 +1281,97 @@ function renderEventsList(){
 function setRSVP(eid,status){const me=S.employees.find(function(e){return e.name===(CU?CU.name:'');});if(!me){toast('Sign in first.');return;}if(!S.rsvps)S.rsvps={};if(!S.rsvps[eid])S.rsvps[eid]={};S.rsvps[eid][me.id]=status;const ev=S.events.find(function(e){return e.id===eid;});if(ev){ev.attendees=ev.attendees||[];if(status==='Going'&&!ev.attendees.includes(me.id))ev.attendees.push(me.id);if(status!=='Going')ev.attendees=ev.attendees.filter(function(a){return a!==me.id;});}fbSave();renderAll();toast('RSVP: '+status);}
 function renderBdays(){const el=document.getElementById('birthdaysList');if(!el)return;const o=S.activeOffice;const month=new Date().getMonth();const bdays=S.employees.filter(function(e){return e.bday&&(o==='All'||e.office===o);}).sort(function(a,b){const am=new Date(a.bday+'T00:00:00').getMonth(),bm=new Date(b.bday+'T00:00:00').getMonth(),ad=new Date(a.bday+'T00:00:00').getDate(),bd=new Date(b.bday+'T00:00:00').getDate(),at=am===month?0:1,bt=bm===month?0:1;return at!==bt?at-bt:am!==bm?am-bm:ad-bd;});el.innerHTML=bdays.length?bdays.map(function(e){const isT=new Date(e.bday+'T00:00:00').getMonth()===month&&new Date(e.bday+'T00:00:00').getDate()===new Date().getDate();const isM=new Date(e.bday+'T00:00:00').getMonth()===month;return'<div class="item"><div class="avatar">'+ini(e.name)+'</div><div class="item-main"><div class="item-ttl">'+esc(e.name)+'</div><div class="meta">'+fs(e.bday)+' \u00B7 '+esc(e.office)+'</div>'+(isT?'<span class="chip today">\uD83C\uDF82 Today!</span>':isM?'<span class="chip today">This month!</span>':'')+' </div></div>';}).join(''):'<div class="empty">No birthdays found.</div>';}
 function renderAnns(){const el=document.getElementById('annList');if(!el)return;const items=S.announcements.filter(vo);el.innerHTML=items.length?items.map(function(a){return'<div class="item"><div class="dot blue"></div><div class="item-main"><div class="item-ttl">'+esc(a.text)+'</div><div class="chips"><span class="chip">'+esc(a.tag||'Note')+'</span><span class="chip" style="background:#eaf1fd;color:#234f97">'+esc(a.office)+'</span></div></div>'+(S.adminMode?'<div class="actions"><button class="ic-btn" onclick=\'editAnn('+JSON.stringify(a).replace(/'/g,"&#39;")+')\'>&#9998;</button><button class="ic-btn" onclick="deleteAnn('+a.id+')">&#10005;</button></div>':'')+' </div>';}).join(''):'<div class="empty">No announcements.</div>';}
+/* ── POTLUCK SIGN-UP ── */
+const PL_CATS=['Main Dish','Dessert','Condiments','Drinks','Other'];
+const PL_ICON={'Main Dish':'🍗',Dessert:'🍰',Condiments:'🥫',Drinks:'🥤',Other:'🍽️'};
+const PL_HINT={'Main Dish':'Entrées, meats, pasta, rice, hot dishes',Dessert:'Cakes, cookies, pies, sweets',Condiments:'Sauces, dressings, plates, cups, napkins, utensils',Drinks:'Soda, juice, water, sweet tea, coffee',Other:'Sides, salads, bread — or anything else, write it in'};
+function plInfo(){if(!S.potluck||typeof S.potluck!=='object'||Array.isArray(S.potluck))S.potluck=makeDefault().potluck;if(!Array.isArray(S.potluck.signups))S.potluck.signups=[];return S.potluck;}
+function plMe(){return S.employees.find(function(e){return e.name===(CU?CU.name:'');});}
+function plCanEdit(s){if(S.adminMode)return true;const me=plMe();if(me&&Number(s.empId)===Number(me.id))return true;return!!(CU&&s.name===CU.name);}
+function renderPotluck(){
+  const card=document.getElementById('potluckCard');if(!card)return;
+  const p=plInfo();
+  card.style.display=vo(p)?'':'none';
+  const eb=document.getElementById('plEditBtn');if(eb)eb.style.display=S.adminMode?'inline-flex':'none';
+  const d=du(p.date);const bTxt=d<0?'Past':d===0?'Today!':d<=7?d+' days away':'Upcoming';const bCls=d<0?'past':d===0?'today':d<=7?'soon':'';
+  const bn=document.getElementById('potluckBanner');
+  if(bn)bn.innerHTML='<div class="pl-when">'+esc(p.title||'Potluck')+' · '+fd(p.date)+(p.time?' · '+esc(p.time):'')+'</div>'+
+    (p.blurb?'<div class="meta">'+esc(p.blurb)+'</div>':'')+
+    '<div class="chips"><span class="chip '+bCls+'">'+bTxt+'</span>'+
+    (p.location?'<span class="chip">📍 '+esc(p.location)+'</span>':'')+
+    '<span class="chip" style="background:#eaf1fd;color:#234f97">'+esc(p.office||'All')+'</span>'+
+    '<span class="chip">'+p.signups.length+' signed up</span></div>';
+  const g=document.getElementById('potluckGrid');if(!g)return;
+  g.innerHTML=PL_CATS.map(function(cat){
+    const rows=p.signups.filter(function(s){return s.cat===cat;});
+    return'<div class="pl-col">'+
+      '<div class="pl-col-head"><div class="pl-cat">'+PL_ICON[cat]+' '+esc(cat)+'</div>'+
+      '<div style="display:flex;gap:5px;align-items:center"><span class="pl-count">'+rows.length+'</span>'+
+      '<button class="ic-btn" title="Sign up for '+esc(cat)+'" onclick="addPotluck(\''+cat+'\')">+</button></div></div>'+
+      '<div class="meta" style="margin-top:0">'+esc(PL_HINT[cat])+'</div>'+
+      (rows.length?rows.map(function(s){
+        const mine=plCanEdit(s);
+        return'<div class="pl-item'+(mine?' pl-mine':'')+'"><div class="pl-av">'+ini(s.name)+'</div>'+
+          '<div style="flex:1;min-width:0"><div class="pl-name">'+esc(s.name)+'</div><div class="pl-what">'+esc(s.item)+'</div>'+(s.note?'<div class="meta">'+esc(s.note)+'</div>':'')+'</div>'+
+          (mine?'<div class="actions" style="gap:4px"><button class="ic-btn" style="padding:4px 6px;font-size:11px" onclick=\'editPotluck('+JSON.stringify(s).replace(/'/g,"&#39;")+')\'>&#9998;</button><button class="ic-btn" style="padding:4px 6px;font-size:11px" onclick="deletePotluck('+s.id+')">&#10005;</button></div>':'')+
+        '</div>';
+      }).join(''):'<div class="empty" style="padding:10px 0">Open — be the first!</div>')+
+    '</div>';
+  }).join('');
+}
+function plForm(s){
+  const who=(s&&s.name)||(CU?CU.name:'');
+  return'<input type="hidden" id="m-plid" value="'+((s&&s.id)||0)+'">'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+    '<div><label class="lbl">Category</label><select class="field" id="m-plcat">'+selOpts(PL_CATS,(s&&s.cat)||'Main Dish')+'</select></div>'+
+    '<div><label class="lbl">Signing up as</label>'+(S.adminMode?
+      '<select class="field" id="m-plwho">'+S.employees.map(function(e){return'<option value="'+e.id+'"'+(e.name===who?' selected':'')+'>'+esc(e.name)+'</option>';}).join('')+'</select>':
+      '<input class="field" id="m-plwhoTxt" value="'+esc(who)+'" disabled>')+'</div></div>'+
+    '<label class="lbl">What are you bringing?</label><input class="field" id="m-plitem" placeholder="e.g. Sweet potato pie" value="'+esc((s&&s.item)||'')+'">'+
+    '<label class="lbl">Note (optional)</label><input class="field" id="m-plnote" placeholder="Serves 12 · needs an outlet · nut-free" value="'+esc((s&&s.note)||'')+'">';
+}
+function addPotluck(cat){
+  if(!CU){toast('Sign in first.');return;}
+  openModal({title:'🍽️ Potluck Sign-Up',body:plForm({cat:PL_CATS.indexOf(cat)>-1?cat:'Main Dish'}),btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="savePotluck()">Add Me to the List</button>'});
+}
+function editPotluck(s){
+  openModal({title:'✎ Edit Potluck Item',body:plForm(s),btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="savePotluck()">Save</button><button class="btn-danger" onclick="deletePotluck('+s.id+');closeModal()">Remove</button>'});
+}
+function savePotluck(){
+  const p=plInfo();const id=Number(tv('m-plid'))||0;
+  const item=tv('m-plitem').trim();
+  if(!item){toast('Add what you’re bringing.');return;}
+  const cat=tv('m-plcat')||'Other';const note=tv('m-plnote').trim();
+  let name=CU?CU.name:'',empId=0;
+  const sel=document.getElementById('m-plwho');
+  if(sel&&sel.value){const emp=ebi(sel.value);if(emp){name=emp.name;empId=emp.id;}}
+  else{const me=plMe();if(me){name=me.name;empId=me.id;}}
+  if(!name){toast('Sign in first.');return;}
+  if(id){const ex=p.signups.find(function(x){return Number(x.id)===id;});if(ex)Object.assign(ex,{cat:cat,item:item,note:note,name:name,empId:empId});}
+  else{p.signups.push({id:S.nextId++,cat:cat,item:item,note:note,name:name,empId:empId,ts:Date.now()});addLog(name+' is bringing '+item+' ('+cat+') to the potluck.',p.office||'All');}
+  fbSave();renderAll();closeModal();toast(id?'Potluck item updated.':'You’re on the potluck list — thank you!');
+}
+function deletePotluck(id){
+  const p=plInfo();const s=p.signups.find(function(x){return Number(x.id)===Number(id);});
+  if(!s)return;
+  if(!plCanEdit(s)){toast('Only '+String(s.name).split(' ')[0]+' or an admin can remove that.');return;}
+  p.signups=p.signups.filter(function(x){return Number(x.id)!==Number(id);});
+  fbSave();renderAll();toast('Removed from the potluck list.');
+}
+function editPotluckInfo(){
+  const p=plInfo();
+  openModal({title:'🍽️ Potluck Details',body:'<label class="lbl">Title</label><input class="field" id="m-pltitle" value="'+esc(p.title||'')+'">'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Date</label><input type="date" class="field" id="m-pldate" value="'+esc(p.date||'')+'"></div><div><label class="lbl">Time</label><input class="field" id="m-pltime" value="'+esc(p.time||'')+'"></div></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><label class="lbl">Location</label><input class="field" id="m-plloc" placeholder="Orlando office · break room" value="'+esc(p.location||'')+'"></div><div><label class="lbl">Office</label><select class="field" id="m-ploffice">'+offOpts(p.office||'All',true)+'</select></div></div>'+
+    '<label class="lbl">Description</label><textarea class="field" id="m-plblurb" rows="4">'+esc(p.blurb||'')+'</textarea>',
+    btns:'<button class="btn-sec" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="savePotluckInfo()">Save</button>'});
+}
+function savePotluckInfo(){
+  const p=plInfo();
+  p.title=tv('m-pltitle')||'Potluck';p.date=tv('m-pldate')||p.date;p.time=tv('m-pltime');p.location=tv('m-plloc');p.office=tv('m-ploffice')||'All';
+  const tb=document.getElementById('m-plblurb');p.blurb=tb?tb.value:p.blurb;
+  fbSave();renderAll();closeModal();toast('Potluck details updated.');
+}
 function renderTodos(){const el=document.getElementById('todoList');if(!el)return;const items=S.todos.filter(vo);el.innerHTML=items.length?items.map(function(t){return'<div class="item"><button class="ic-btn" onclick="toggleTodo('+t.id+')">'+(t.done?'&#10003;':'&#9675;')+'</button><div class="item-main"><div class="item-ttl" style="'+(t.done?'text-decoration:line-through;color:var(--mu)':'')+'">'+esc(t.label)+'</div></div>'+(S.adminMode?'<button class="ic-btn" onclick="deleteTodo('+t.id+')">&#10005;</button>':'')+' </div>';}).join(''):'<div class="empty">All done!</div>';}
 function renderNotifs(){const el=document.getElementById('notifList');if(!el)return;const items=(S.notifications||[]).filter(function(n){return n.scope==='All'||n.scope===S.activeOffice;});el.innerHTML=items.length?items.map(function(n){return'<div class="notice"><div class="nd"></div><div><div style="font-size:12px;color:var(--navy)">'+esc(n.text)+'</div><div class="meta">'+rt(n.createdAt)+'</div></div></div>';}).join(''):'<div class="empty">No notifications.</div>';}
 function renderDirectory(){const el=document.getElementById('dirGrid');if(!el)return;const q=tv('dirSearch').toLowerCase();const of=tv('dirOff');const list=S.employees.filter(function(e){return(of==='All'||e.office===of)&&(!q||[e.name,e.pos,e.office,e.email].join(' ').toLowerCase().includes(q));});el.innerHTML=list.length?list.map(function(e){return'<div class="person"><div class="avatar">'+ini(e.name)+'</div><div style="flex:1;min-width:0"><div style="font-weight:800;font-size:12px">'+esc(e.name)+'</div><div style="font-size:11px;font-weight:700;color:var(--gpos);letter-spacing:.2px;margin:1px 0 2px">'+esc(e.pos)+'</div><div class="meta">'+esc(e.office)+' \u00B7 <span style="color:'+(e.status==='Active'?'var(--green)':'var(--red)')+'">'+esc(e.status)+'</span></div>'+(e.email?'<div class="meta">'+esc(e.email)+'</div>':'')+(e.phone?'<div class="meta">'+esc(e.phone)+'</div>':'')+(e.bday?'<div class="meta">\uD83C\uDF82 '+fs(e.bday)+'</div>':'')+' </div>'+(S.adminMode?'<div class="actions" style="flex-direction:column"><button class="ic-btn" onclick=\'editEmp('+JSON.stringify(e).replace(/'/g,"&#39;")+')\'>&#9998;</button><button class="ic-btn" onclick="toggleEmpStatus('+e.id+')">'+(e.status==='Active'?'&#8856;':'&#8634;')+'</button>'+'<button class="ic-btn" title="Reset PIN" style="font-size:10px;color:var(--orange)" onclick="resetPin(\''+e.name+'\')" >&#128274; Reset PIN</button></div>':'')+' </div>';}).join(''):'<div class="empty">No employees matched.</div>';}
