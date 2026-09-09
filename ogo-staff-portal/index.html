@@ -201,7 +201,7 @@ button,input,select,textarea{font:inherit}
   background:linear-gradient(165deg,#FFFAF2 0%,#FDF0DF 55%,#F9E3CB 100%);
   border:1px solid var(--pl-edge);
   box-shadow:0 12px 30px rgba(140,58,22,.16);
-  overflow:hidden;position:relative
+  overflow:hidden;position:relative;margin-bottom:14px
 }
 #potluckCard::before{content:'';position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg,var(--pl-rust),var(--pl-pumpkin) 30%,var(--pl-gold) 60%,var(--pl-moss))}
 #potluckCard .card-head{background:linear-gradient(100deg,var(--pl-rust),var(--pl-pumpkin) 55%,var(--pl-amber));border-bottom:1px solid var(--pl-edge);padding-top:14px}
@@ -380,6 +380,19 @@ button,input,select,textarea{font:inherit}
 
         <!-- DASHBOARD -->
         <section class="sec active" data-s="dashboard">
+            <div class="card s12" id="potluckCard">
+              <div class="card-head">
+                <div class="card-title"><div class="icon">&#127809;</div>Potluck Sign-Up &#127810;</div>
+                <div class="had">
+                  <button class="btn-sm" onclick="addPotluck('')">&#127869; I'm Bringing Something</button>
+                  <button class="btn-sm" id="plEditBtn" style="display:none" onclick="editPotluckInfo()">&#9998; Edit Details</button>
+                </div>
+              </div>
+              <div style="padding:14px">
+                <div class="pl-banner" id="potluckBanner"></div>
+                <div class="pl-grid" id="potluckGrid"></div>
+              </div>
+            </div>
           <div class="hero">
             <div class="card hero-card">
               <div class="chip" id="heroChip">&starf; Company</div>
@@ -414,19 +427,6 @@ button,input,select,textarea{font:inherit}
             <div class="card s6">
               <div class="card-head"><div class="card-title"><div class="icon">&#9989;</div>Action Items</div></div>
               <div style="padding:14px"><div class="list" id="todoList"></div></div>
-            </div>
-            <div class="card s12" id="potluckCard">
-              <div class="card-head">
-                <div class="card-title"><div class="icon">&#127809;</div>Potluck Sign-Up &#127810;</div>
-                <div class="had">
-                  <button class="btn-sm" onclick="addPotluck('')">&#127869; I'm Bringing Something</button>
-                  <button class="btn-sm" id="plEditBtn" style="display:none" onclick="editPotluckInfo()">&#9998; Edit Details</button>
-                </div>
-              </div>
-              <div style="padding:14px">
-                <div class="pl-banner" id="potluckBanner"></div>
-                <div class="pl-grid" id="potluckGrid"></div>
-              </div>
             </div>
             <div class="card s12">
               <div class="card-head"><div class="card-title"><div class="icon">&#128276;</div>Notifications</div></div>
