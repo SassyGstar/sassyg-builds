@@ -8,20 +8,14 @@ A single-file staff portal web app built for a multi-office tax firm. It include
 - ⏰ Time clock with office geofencing
 - 👥 Staff directory and birthdays
 - 📝 PTO / request tracking
-- 🎯 **Client Command Center** — one record per client and tax year that shows
-  where the file stands, what is missing, who owns it, and what happens next:
-  - 14 standard workflow stages, each with one meaning, a target number of days,
-    and the roles allowed to move a client into it
-  - Red / yellow / green missing-information checklists for each service, with
-    when the client was last asked
-  - "My Work" daily queue, a "Waiting On" board (client, staff, review, IRS),
-    and alerts generated automatically
-  - Required fields, format checks (phone, ZIP, SSN last 4, EIN), duplicate-client
-    detection, and prior-year change review
-  - One activity log per client with pinnable notes, handoffs that the
-    receiving employee must accept, and a record of views and changes
-  - Document register with standard file names, payment holds, management
-    reports, and an intake CSV import
+- 🎯 **Client Command Center** — one simple flow for every return:
+  **Created By → Preparation Status → IRS Status**
+  - Preparation Status (Missing Documents, Needs Work, Ready to Send, Client
+    Opts Out) and IRS Status (Submitted, Rejected, Resend) change right from
+    the list with dropdowns
+  - Status cards that filter the list, a "My Work" queue, and automatic alerts
+  - Missing-documents checklist per service, a per-client activity log, and a
+    record of every status change
 - 📊 Analytics
 - 🔄 Optional real-time sync across devices (Firebase)
 
