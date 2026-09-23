@@ -10,12 +10,15 @@ A single-file staff portal web app built for a multi-office tax firm. It include
 - 📝 PTO / request tracking
 - 🎯 **Client Command Center** — one simple flow for every return:
   **Created By → Preparation Status → IRS Status**
-  - Preparation Status (Missing Documents, Needs Work, Ready to Send, Client
-    Opts Out) and IRS Status (Submitted, Rejected, Resend) change right from
-    the list with dropdowns
-  - Status cards that filter the list, a "My Work" queue, and automatic alerts
-  - Missing-documents checklist per service, a per-client activity log, and a
-    record of every status change
+  - Preparation Status (Missing Documents, Ready to Send, Needs Work, Client
+    Opted Out) and IRS Status (Submitted, Accepted, Rejected, Resend,
+    Resubmitted) change right from the list; a rejection requires the code
+  - Handoffs that record why, what is done, and what is still needed, and
+    notify the receiver; a trail shows who started, sent, and finished each return
+  - Structured notes (done / happened / still needed / responsible / follow-up)
+    with pinned reminders, and an Activity by Day view per employee
+  - Opted-out and accepted clients stay visible; checklists can be edited to
+    match the office's paper checklist
 - 📊 Analytics
 - 🔄 Optional real-time sync across devices (Firebase)
 

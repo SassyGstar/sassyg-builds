@@ -431,6 +431,35 @@ button,input,select,textarea{font:inherit}
 .cc-scard .s{font-size:9px;color:var(--mu);margin-top:1px}
 .cc-sc-red{border-left-color:var(--red)}.cc-sc-amber{border-left-color:#E0A526}.cc-sc-green{border-left-color:var(--green)}.cc-sc-blue{border-left-color:#3A6BC4}.cc-sc-grey{border-left-color:#B8C2C7}
 @media(max-width:1100px){.cc-status-cards{grid-template-columns:1fr}}
+/* v7.2: return trail, structured notes, reminders */
+.cc-code{margin-top:6px;font-size:11px;color:#8B2F2F;background:#fff;border:1px dashed #efcaca;border-radius:8px;padding:4px 7px}
+.cc-code a{color:inherit}
+.cc-trail{display:flex;align-items:stretch;gap:4px;flex-wrap:wrap;margin:-2px 0 12px;padding:8px;border:1px solid var(--ln);border-radius:12px;background:#F7F9FA}
+.cc-step{background:#fff;border:1px solid var(--ln);border-radius:9px;padding:5px 9px;min-width:110px}
+.cc-step .k{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.7px;color:var(--mu)}
+.cc-step .v{font-size:12px;font-weight:800;color:var(--navy)}
+.cc-step .d{font-size:10px;color:var(--mu)}
+.cc-step.todo{border-style:dashed;background:transparent}.cc-step.todo .v{color:var(--mu)}
+.cc-arrow{align-self:center;color:var(--mu);font-size:16px}
+.cc-note{border:1px solid var(--ln);border-radius:11px;padding:9px 11px;margin-bottom:8px;background:#fff;font-size:12px}
+.cc-note.sys{background:#F7F9FA;padding:6px 10px;font-size:11px}
+.cc-note.reminder{background:#FFF9E8;border-color:#ead8a8;border-left:4px solid #E0A526}
+.cc-note-h{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:5px;font-size:11px}
+.cc-note-h .wf-muted{margin-left:auto}
+.cc-note-type{font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.6px;padding:2px 7px;border-radius:999px;background:var(--glt);color:var(--teal-d)}
+.cc-note-type.t-statuschange{background:#EEF1F3;color:#5B676D}.cc-note-type.t-handoff{background:#FFF4DC;color:#7A5412}.cc-note-type.t-internalnote{background:#EFE9F8;color:#5B3E8A}
+.cc-note-grid{display:grid;grid-template-columns:92px 1fr;gap:3px 10px;font-size:12px;line-height:1.45}
+.cc-note-grid .k{font-size:10px;font-weight:800;color:var(--mu);text-transform:uppercase;letter-spacing:.4px;padding-top:2px}
+.cc-note-grid .v{color:var(--navy);word-break:break-word}
+.cc-note-plain{color:var(--navy);line-height:1.45}
+.cc-note-acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px}
+.cc-note-acts .btn-sm{padding:4px 9px;font-size:10px}
+.cc-rem-box{border-color:#ead8a8}
+.cc-pin-toggle{display:flex;gap:7px;align-items:center;font-size:12px;font-weight:700;color:#7A5412;background:#FFF9E8;border:1px solid #ead8a8;border-radius:10px;padding:9px 11px;cursor:pointer}
+.cc-glance{grid-template-columns:repeat(3,1fr)}
+.cc-status-cards{grid-template-columns:4fr 4fr}
+@media(max-width:1100px){.cc-status-cards{grid-template-columns:1fr}.cc-glance{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.cc-glance{grid-template-columns:1fr}.cc-note-grid{grid-template-columns:1fr}.cc-arrow{display:none}}
 </style>
 </head>
 <body>
@@ -691,15 +720,16 @@ button,input,select,textarea{font:inherit}
           <div class="card">
             <div class="card-head">
               <div class="card-title"><div class="icon">&#127919;</div>Client Command Center</div>
-              <div class="had"><span class="meta" id="wfSignedInAs"></span><button class="btn-sm" onclick="ccOpenLog()">&#9742; Log Contact / Note</button><button class="btn-pri" onclick="ccOpenEdit()">+ New Client</button></div>
+              <div class="had"><span class="meta" id="wfSignedInAs"></span><button class="btn-sm" onclick="ccOpenLog()">&#128221; Add Note</button><button class="btn-pri" onclick="ccOpenEdit()">+ New Client</button></div>
             </div>
             <div style="padding:14px">
-              <div class="cc-principle"><strong>Created by</strong> &rarr; <strong>Preparation Status</strong> &rarr; <strong>IRS Status</strong>. Change either status right from the list. Keep SSNs, DOBs, bank details, contact details, and tax documents in TaxDome/TaxSlayer &mdash; this dashboard tracks where each return stands.</div>
+              <div class="cc-principle"><strong>Created by</strong> &rarr; <strong>Preparation Status</strong> &rarr; <strong>IRS Status</strong>. Change either status right from the list. Every note should say what was done, what happened, what is still needed, who is responsible, and the next follow-up date. Documents and client details stay in TaxDome.</div>
               <div class="wf-top">
                 <button class="wf-tab active" data-wftab="clients" onclick="wfSetTab('clients')">&#128101; Dashboard</button>
                 <button class="wf-tab" data-wftab="mywork" onclick="wfSetTab('mywork')">&#127919; My Work <span id="ccMyCount"></span></button>
                 <button class="wf-tab" data-wftab="alerts" onclick="wfSetTab('alerts')">&#128276; Alerts <span id="ccAlertCount"></span></button>
-                <button class="wf-tab" data-wftab="daily" onclick="wfSetTab('daily')">&#128339; Activity Log</button>
+                <button class="wf-tab" data-wftab="handoffs" onclick="wfSetTab('handoffs')">&#129309; Handoffs <span id="wfHandoffTabCount"></span></button>
+                <button class="wf-tab" data-wftab="daily" onclick="wfSetTab('daily')">&#128339; Activity by Day</button>
                 <button class="wf-tab" data-wftab="reports" id="ccReportsTab" onclick="wfSetTab('reports')">&#128202; Management</button>
                 <button class="wf-tab" data-wftab="setup" onclick="wfSetTab('setup')">&#9881; Setup</button>
               </div>
@@ -743,10 +773,21 @@ button,input,select,textarea{font:inherit}
                 </div>
               </div>
 
-              <!-- ACTIVITY LOG -->
+              <!-- HANDOFFS -->
+              <div class="wf-pane" data-wfpane="handoffs">
+                <div class="meta" style="margin-bottom:10px">A handoff says why, what is done, and what the next person must do. The return moves to them when they accept, so everyone can see who started it and who finished it.</div>
+                <div class="g">
+                  <div class="card s8" style="box-shadow:none"><div class="card-head"><div class="card-title">&#128276; Waiting for Me</div></div><div style="padding:12px" id="wfPendingHandoffs"></div></div>
+                  <div class="card s4" style="box-shadow:none"><div class="card-head"><div class="card-title">&#128228; I Sent (not yet accepted)</div></div><div style="padding:12px" id="wfSentHandoffs"></div></div>
+                </div>
+                <div class="card" style="box-shadow:none;margin-top:14px"><div class="card-head"><div class="card-title">&#128220; Handoff History</div><div class="had"><button class="btn-sm" onclick="wfExportHandoffs()">&#128196; Export CSV</button></div></div><div class="tbl-wrap"><table class="table" style="min-width:1100px"><thead><tr><th>Sent</th><th>Client</th><th>From &rarr; To</th><th>Status</th><th>Why</th><th>Completed</th><th>Still To Do</th><th>Response</th></tr></thead><tbody id="wfHandoffRows"></tbody></table></div></div>
+              </div>
+
+              <!-- ACTIVITY BY DAY -->
               <div class="wf-pane" data-wfpane="daily">
-                <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><div><div class="side-title" style="margin-bottom:2px">Client Activity Log</div><div class="meta">Calls, messages, documents, requests, notes, and every status change &mdash; newest first.</div></div><div class="wf-actions"><select class="field" id="ccLogType" onchange="renderWorkflow()" style="width:auto"></select><button class="btn-pri" onclick="ccOpenLog()">+ Log Contact / Note</button></div></div>
-                <div class="tbl-wrap"><table class="table" style="min-width:900px"><thead><tr><th>When</th><th>Client</th><th>Staff</th><th>Type</th><th>What Happened</th><th>Next Action</th><th>Follow-Up</th></tr></thead><tbody id="wfDailyRows"></tbody></table></div>
+                <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px"><div><div class="side-title" style="margin-bottom:2px">Activity by Day</div><div class="meta">What each employee did, with who, and when. Pick a day or clear it to see everything.</div></div><div class="wf-actions"><input class="field" type="date" id="ccLogDate" onchange="renderWorkflow()" style="width:auto"><button class="btn-sm" onclick="document.getElementById('ccLogDate').value=wfToday();renderWorkflow()">Today</button><button class="btn-sm" onclick="document.getElementById('ccLogDate').value='';renderWorkflow()">All days</button><select class="field" id="ccLogStaff" onchange="renderWorkflow()" style="width:auto"></select><select class="field" id="ccLogType" onchange="renderWorkflow()" style="width:auto"></select><button class="btn-pri" onclick="ccOpenLog()">+ Add Note</button></div></div>
+                <div class="cc-sgroup-c" id="ccDaySummary" style="margin-bottom:12px"></div>
+                <div class="tbl-wrap"><table class="table" style="min-width:900px"><thead><tr><th>When</th><th>Client</th><th>Staff</th><th>Type</th><th>What Was Done / Happened</th><th>Still Needed</th><th>Follow-Up</th></tr></thead><tbody id="wfDailyRows"></tbody></table></div>
               </div>
 
               <!-- MANAGEMENT -->
@@ -756,13 +797,13 @@ button,input,select,textarea{font:inherit}
                   <div class="g">
                     <div class="card s6" style="box-shadow:none"><div class="card-head"><div class="card-title">&#128221; Preparation Status</div></div><div style="padding:12px" id="ccPrepBars"></div></div>
                     <div class="card s6" style="box-shadow:none"><div class="card-head"><div class="card-title">&#127963; IRS Status</div></div><div style="padding:12px" id="ccIrsBars"></div></div>
-                    <div class="card s8" style="box-shadow:none"><div class="card-head"><div class="card-title">&#128101; Clients by Employee (Created By)</div></div><div class="tbl-wrap" style="padding:0 8px 8px"><table class="table" style="min-width:640px"><thead><tr><th>Employee</th><th>Created</th><th>Missing Docs</th><th>Needs Work</th><th>Ready to Send</th><th>Submitted</th><th>Rejected / Resend</th></tr></thead><tbody id="ccWorkload"></tbody></table></div></div>
+                    <div class="card s8" style="box-shadow:none"><div class="card-head"><div class="card-title">&#128101; Clients by Employee (Created By)</div></div><div class="tbl-wrap" style="padding:0 8px 8px"><table class="table" style="min-width:640px"><thead><tr><th>Employee</th><th>Created</th><th>Missing Docs</th><th>Needs Work</th><th>Ready to Send</th><th>Accepted</th><th>Rejected / Resend</th></tr></thead><tbody id="ccWorkload"></tbody></table></div></div>
                     <div class="card s4" style="box-shadow:none"><div class="card-head"><div class="card-title">&#128228; Submitted (Last 7 Days)</div></div><div style="padding:12px" id="ccCompletions"></div></div>
                     <div class="card s6" style="box-shadow:none"><div class="card-head"><div class="card-title">&#127970; By Office</div></div><div class="tbl-wrap" style="padding:0 8px 8px"><table class="table" style="min-width:480px"><thead><tr><th>Office</th><th>Active</th><th>Missing Docs</th><th>Needs Work</th><th>Ready to Send</th><th>Rejected / Resend</th><th>Balance</th></tr></thead><tbody id="ccOfficeLoad"></tbody></table></div></div>
                     <div class="card s6" style="box-shadow:none"><div class="card-head"><div class="card-title">&#128339; Sitting Too Long</div></div><div style="padding:12px" id="ccStale"></div></div>
                   </div>
                   <div class="card" style="box-shadow:none;margin-top:14px">
-                    <div class="card-head"><div class="card-title">&#128274; Access &amp; Change Log</div><div class="had"><select class="field" id="ccAuditKind" onchange="renderWorkflow()" style="width:auto"><option value="">All entries</option><option value="view">Viewed</option><option value="edit">Edited</option><option value="status">Status changes</option><option value="finance">Financial</option><option value="override">Duplicates saved</option></select></div></div>
+                    <div class="card-head"><div class="card-title">&#128274; Access &amp; Change Log</div><div class="had"><select class="field" id="ccAuditKind" onchange="renderWorkflow()" style="width:auto"><option value="">All entries</option><option value="view">Viewed</option><option value="edit">Edited</option><option value="status">Status changes</option><option value="finance">Financial</option><option value="handoff">Handoffs</option><option value="override">Duplicates saved</option></select></div></div>
                     <div class="tbl-wrap" style="padding:0 8px 8px"><table class="table" style="min-width:760px"><thead><tr><th>When</th><th>Who</th><th>Client</th><th>Kind</th><th>What</th></tr></thead><tbody id="ccAuditRows"></tbody></table></div>
                   </div>
                 </div>
@@ -855,7 +896,7 @@ button,input,select,textarea{font:inherit}
 
       </main>
       <div style="text-align:center;padding:18px 12px 26px;color:var(--mu);font-size:11px;border-top:1px solid var(--ln);margin-top:8px">
-        OGO Portal v7.1 &nbsp;&#183;&nbsp; Client Command Center &nbsp;&#183;&nbsp; Updated September 22, 2026 &nbsp;&#183;&nbsp; Beyond the Numbers, We're Here for You.
+        OGO Portal v7.2 &nbsp;&#183;&nbsp; Client Command Center &nbsp;&#183;&nbsp; Updated September 22, 2026 &nbsp;&#183;&nbsp; Beyond the Numbers, We're Here for You.
       </div>
     </div>
     <div class="mob-nav" id="mobileNav"></div>
@@ -1887,14 +1928,16 @@ const CC_ROLES=[CC_R,CC_P,CC_V,CC_B,CC_M,CC_A];
 /* The two official status lists. Each value has one meaning. */
 const CC_PREP=[
   {k:'Missing Documents',cls:'red',stale:7,def:'We are waiting on the client for one or more items on the checklist.'},
-  {k:'Needs Work',cls:'amber',stale:5,def:'We have what we need. The return is being prepared or needs corrections before it can go out.'},
   {k:'Ready to Send',cls:'green',stale:2,def:'The return is complete and ready to send to the IRS.'},
-  {k:'Client Opts Out',cls:'grey',stale:0,def:'The client decided not to go ahead. No further work; the file stays for the record.'}
+  {k:'Needs Work',cls:'amber',stale:5,def:'The return needs more work or a correction (for example after an IRS rejection) before it can go out.'},
+  {k:'Client Opted Out',cls:'grey',stale:0,def:'The client decided not to go ahead. The client stays on the dashboard for the record.'}
 ];
 const CC_IRS=[
   {k:'Submitted',cls:'blue',def:'The return was sent to the IRS.'},
-  {k:'Rejected',cls:'red',def:'The IRS rejected the return. Record the rejection code and correct it.'},
-  {k:'Resend',cls:'amber',def:'The return has been corrected (or must go again) and needs to be sent to the IRS again.'}
+  {k:'Accepted',cls:'green',def:'The IRS accepted the return. This return is finished.'},
+  {k:'Rejected',cls:'red',def:'The IRS rejected the return. Record the rejection code; set Preparation to Needs Work to correct it.'},
+  {k:'Resend',cls:'amber',def:'The return is corrected (or must go again) and needs to be sent to the IRS again.'},
+  {k:'Resubmitted',cls:'blue',def:'The corrected return was sent to the IRS again.'}
 ];
 const CC_PREP_NONE='Not set',CC_IRS_NONE='Not submitted';
 const CC_IRS_ROLES=[CC_P,CC_V,CC_M,CC_A];
@@ -1929,9 +1972,8 @@ const CC_TEMPLATES={
   'Bookkeeping':['stmts','bizinc','bizexp','pay'],
   'Payroll':['payroll','ein','bank','pay']
 };
-const CC_LOG_TYPES=['Call','Email','Text Message','Appointment','In Person','TaxDome Message','Document Received','Missing-Info Request','Internal Note','Status Change'];
+const CC_LOG_TYPES=['Call','Email','Text Message','Appointment','In Person','TaxDome Message','Internal Note','Missing-Info Request','Document Received','Status Change','Handoff'];
 const CC_CONTACT_TYPES=['Call','Email','Text Message','Appointment','In Person','TaxDome Message'];
-const CC_DOC_CATS=[['01','Identification'],['02','Income'],['03','Deductions & Credits'],['04','Business Records'],['05','Signed Forms'],['06','IRS & State Correspondence'],['07','Filed Returns'],['08','Payments & Invoices'],['09','Other']];
 const CC_INVOICE=['Not Invoiced','Invoiced','Partially Paid','Paid','Waived'];
 const CC_PERMS={
   viewFinance:[CC_R,CC_B,CC_M,CC_A],
@@ -1963,7 +2005,8 @@ function wfEnsure(){
     });
     w.importedSimpleClientsV1=true;changed=true;
   }
-  w.clients.forEach(function(c){if(c.prep===undefined){ccMigrateClient(w,c);changed=true;}});
+  w.clients.forEach(function(c){if(c.prep===undefined){ccMigrateClient(w,c);changed=true;}if(c.prep==='Client Opts Out'){c.prep='Client Opted Out';changed=true;}if(c.archived){c.archived=false;changed=true;} /* nothing is hidden any more */});
+  if(!Array.isArray(w.handoffs))w.handoffs=[];if(!st.checklists)st.checklists={};
   if(!w.version||w.version<4){w.version=4;changed=true;}
   if(changed)fbSave();
   return w;
@@ -1976,21 +2019,23 @@ function ccMigrateClient(w,c){
     if(s==='New Client / Intake Started'||s==='Waiting for Client Documents')prep='Missing Documents';
     else if(['Documents Received','Ready for Preparation','In Preparation','Waiting for Internal Review','Waiting for Client Response'].indexOf(s)>-1)prep='Needs Work';
     else if(s==='Ready to Sign or Send'||s==='Ready to E-file')prep='Ready to Send';
-    else if(s==='Submitted'||s==='Accepted'){prep='Ready to Send';irs='Submitted';}
-    else if(s==='Completed'){prep='Ready to Send';irs='Submitted';arch=true;}
+    else if(s==='Submitted'){prep='Ready to Send';irs='Submitted';}
+    else if(s==='Accepted'||s==='Completed'){prep='Ready to Send';irs='Accepted';}
     else if(s==='Rejected / Needs Correction'){prep='Needs Work';irs='Rejected';}
-    else if(s==='Archived')arch=true;
+    else if(s==='Archived'){prep='Ready to Send';irs='Accepted';}
   }else{ /* v2 preparation / IRS lists */
     var p=c.prepStatus||'',i=c.irsStatus||'';
     if(['New Client / Not Started','Intake in Progress','Missing Information'].indexOf(p)>-1)prep='Missing Documents';
     else if(['All Information Received','Entered into TaxSlayer','Under Preparer Review','Numbers Reviewed and Approved','Client Update Sent','Waiting for Client Authorization'].indexOf(p)>-1)prep='Needs Work';
     else if(['Client Authorization Received','Ready to E-File','E-Filed','Paper Return Required','Return Completed - Balance Due'].indexOf(p)>-1)prep='Ready to Send';
-    else if(p==='Closed or Archived')arch=true;
+    else if(p==='Closed or Archived')prep='Ready to Send';
     if(i==='IRS Rejected'||i==='Additional IRS Action Required')irs='Rejected';
     else if(i==='Correction in Progress')irs='Resend';
+    else if(['IRS Accepted','Refund Approved','Refund Issued','Refund Held or Delayed','Refund Applied to Debt','Balance Due - No Refund','Return Closed'].indexOf(i)>-1)irs='Accepted';
+    else if(i==='Resubmitted to IRS')irs='Resubmitted';
     else if(i&&i!=='Not Submitted')irs='Submitted';
   }
-  c.prep=prep;c.irs=irs;c.archived=!!(c.archived||arch);
+  c.prep=prep;c.irs=irs;c.archived=false;if(!c.handler&&c.assignedTo)c.handler=c.assignedTo;
   c.prepAt=c.prepAt||c.updatedAt||Date.now();c.irsAt=irs?(c.irsAt||c.updatedAt||Date.now()):0;
   if(!c.createdBy){var a=(w.audit||[]).filter(function(x){return Number(x.clientId)===Number(c.id)&&/^(Added client workflow|Created client record)/.test(x.action||'');}).pop();c.createdBy=a?a.actor:'Not recorded';}
   if(!c.service)c.service=({'Individual':'Individual Return','Business':'Business Return','Amended Return':'Amended Return','Prior-Year Return':'Prior-Year Return','ITIN Return':'ITIN Application','Extension':'Extension'})[c.returnType]||'Individual Return';
@@ -2001,12 +2046,20 @@ function ccMigrateClient(w,c){
   c.fin=c.fin||ccBlankFin();
 }
 function ccBlankFin(){return{fee:'',paid:'',invoiceStatus:'Not Invoiced',arrangement:'',holdForPayment:false};}
-function ccBuildChecklist(service){return (CC_TEMPLATES[service]||CC_TEMPLATES['Individual Return']).map(function(k){var d=CC_ITEMS[k];return{k:k,l:d.l,ph:d.ph,req:!d.opt,status:'Missing',requestedAt:'',requestedBy:'',requests:0,receivedAt:'',receivedBy:'',note:''};});}
+function ccBuildChecklist(service){
+  var w=S.clientWorkflow,custom=w&&w.settings&&w.settings.checklists&&w.settings.checklists[ccKey(service)];
+  if(custom&&custom.length)return custom.map(function(d,i){return{k:'c'+i,l:d.l,ph:d.ph||'prep',req:d.req!==false,status:'Missing',requestedAt:'',requestedBy:'',requests:0,receivedAt:'',receivedBy:'',note:''};});
+  return (CC_TEMPLATES[service]||CC_TEMPLATES['Individual Return']).map(function(k){var d=CC_ITEMS[k];return{k:k,l:d.l,ph:d.ph,req:!d.opt,status:'Missing',requestedAt:'',requestedBy:'',requests:0,receivedAt:'',receivedBy:'',note:''};});
+}
+function ccChecklistDef(service){var w=wfEnsure(),custom=w.settings.checklists[ccKey(service)];if(custom&&custom.length)return custom;return (CC_TEMPLATES[service]||[]).map(function(k){var d=CC_ITEMS[k];return{l:d.l,ph:d.ph,req:!d.opt};});}
 function ccOffices(){var o=Object.keys(S.offices||{});return o.length?o:['Orlando','Clermont','Winter Haven'];}
 function ccPrepDef(k){return CC_PREP.find(function(s){return s.k===k;});}
 function ccIrsDef(k){return CC_IRS.find(function(s){return s.k===k;});}
-/* Active = still being worked: not archived and the client has not opted out. */
-function ccIsActive(c){return !c.archived&&c.prep!=='Client Opts Out';}
+/* Open = still being worked: not accepted by the IRS and the client has not opted out. */
+function ccIsActive(c){return !c.archived&&c.prep!=='Client Opted Out'&&c.irs!=='Accepted';}
+/* Who has the return now: set by accepted handoffs, otherwise whoever created it. */
+function ccHandler(c){return c.handler||c.assignedTo||(c.createdBy&&c.createdBy!=='Not recorded'&&c.createdBy!=='Portal migration'?c.createdBy:'');}
+function ccPendingHandoff(c){return (wfEnsure().handoffs||[]).find(function(h){return Number(h.clientRecordId)===Number(c.id)&&h.status==='Pending';});}
 function ccFind(id){return wfEnsure().clients.find(function(x){return Number(x.id)===Number(id);});}
 function ccDaysSince(ts){if(!ts)return 0;return Math.max(0,Math.floor((Date.now()-ts)/86400000));}
 function ccDateDiff(d){if(!d)return null;return du(d);}
@@ -2055,11 +2108,11 @@ function ccTouch(c){c.updatedAt=Date.now();c.updatedBy=wfActor();}
 
 /* ── STATUS DROPDOWNS (list, My Work, and the client record) ── */
 function ccPrepSelect(c){var d=ccPrepDef(c.prep);return'<select class="cc-sel cc-sel-'+(d?d.cls:'none')+'" title="Preparation Status" onclick="event.stopPropagation()" onchange="ccSetPrep('+c.id+',this.value,this)"><option value="" '+(!c.prep?'selected':'')+'>'+CC_PREP_NONE+'</option>'+CC_PREP.map(function(s){return'<option value="'+esc(s.k)+'" '+(s.k===c.prep?'selected':'')+'>'+esc(s.k)+'</option>';}).join('')+'</select>';}
-function ccIrsSelect(c){var d=ccIrsDef(c.irs),dis=!ccCanIrs()||c.prep==='Client Opts Out';return'<select class="cc-sel cc-sel-'+(d?d.cls:'none')+'" title="'+(dis?(c.prep==='Client Opts Out'?'Client opted out':'Your role cannot change the IRS status'):'IRS Status')+'" '+(dis?'disabled':'')+' onclick="event.stopPropagation()" onchange="ccSetIrs('+c.id+',this.value,this)"><option value="" '+(!c.irs?'selected':'')+'>'+CC_IRS_NONE+'</option>'+CC_IRS.map(function(s){return'<option value="'+esc(s.k)+'" '+(s.k===c.irs?'selected':'')+'>'+esc(s.k)+'</option>';}).join('')+'</select>';}
+function ccIrsSelect(c){var d=ccIrsDef(c.irs),dis=!ccCanIrs()||c.prep==='Client Opted Out';return'<select class="cc-sel cc-sel-'+(d?d.cls:'none')+'" title="'+(dis?(c.prep==='Client Opted Out'?'Client opted out':'Your role cannot change the IRS status'):'IRS Status')+'" '+(dis?'disabled':'')+' onclick="event.stopPropagation()" onchange="ccSetIrs('+c.id+',this.value,this)"><option value="" '+(!c.irs?'selected':'')+'>'+CC_IRS_NONE+'</option>'+CC_IRS.map(function(s){return'<option value="'+esc(s.k)+'" '+(s.k===c.irs?'selected':'')+'>'+esc(s.k)+'</option>';}).join('')+'</select>';}
 function ccSetPrep(id,val,el){
   var c=ccFind(id);if(!c)return;var old=c.prep||'';if(old===val)return;
   if(val==='Ready to Send'){var miss=ccOutstanding(c,'prep');if(miss.length&&!confirm(c.name+' still has '+miss.length+' missing item'+(miss.length>1?'s':'')+':\n• '+miss.map(function(i){return i.l;}).join('\n• ')+'\n\nMark Ready to Send anyway?')){if(el)el.value=old;return;}}
-  if(val==='Client Opts Out'&&!confirm('Mark '+c.name+' as Client Opts Out? The file leaves the active list but stays on record.')){if(el)el.value=old;return;}
+  if(val==='Client Opted Out'&&!confirm('Mark '+c.name+' as Client Opted Out? The client stays on the dashboard and keeps its full history.')){if(el)el.value=old;return;}
   c.prep=val;c.prepAt=Date.now();c.prepBy=wfActor();
   if(val==='Missing Documents'&&!c.nextAction){c.nextAction='Request the missing documents from the client';c.nextActionOwner=c.nextActionOwner||wfActor();c.nextActionDue=wfAddDays(wfToday(),1);}
   ccLog(c,'Status Change','Preparation: '+(old||CC_PREP_NONE)+' → '+(val||CC_PREP_NONE)+'.');wfAudit('Preparation '+(old||CC_PREP_NONE)+' → '+(val||CC_PREP_NONE),c,'status');
@@ -2068,20 +2121,21 @@ function ccSetPrep(id,val,el){
 function ccSetIrs(id,val,el){
   var c=ccFind(id);if(!c)return;var old=c.irs||'';if(old===val)return;
   if(!ccCanIrs()){toast('Your role cannot change the IRS status.');if(el)el.value=old;return;}
-  if(val==='Submitted'&&c.prep!=='Ready to Send'&&!confirm('Preparation Status is “'+(c.prep||CC_PREP_NONE)+'”, not Ready to Send. Mark as Submitted to the IRS anyway?')){if(el)el.value=old;return;}
-  var f=c.fin||{};if(val==='Submitted'&&f.holdForPayment&&ccBalance(c)>0&&!confirm('Sending is on hold for payment ('+ccMoney(ccBalance(c))+' due). Mark Submitted anyway?')){if(el)el.value=old;return;}
+  if((val==='Submitted'||(val==='Resubmitted'&&c.prep!=='Needs Work'))&&c.prep!=='Ready to Send'&&!confirm('Preparation Status is “'+(c.prep||CC_PREP_NONE)+'”, not Ready to Send. Mark as Submitted to the IRS anyway?')){if(el)el.value=old;return;}
+  var f=c.fin||{};if((val==='Submitted'||val==='Resubmitted')&&f.holdForPayment&&ccBalance(c)>0&&!confirm('Sending is on hold for payment ('+ccMoney(ccBalance(c))+' due). Mark Submitted anyway?')){if(el)el.value=old;return;}
   var extra='';
   if(val==='Rejected'){
-    var code=prompt('IRS rejection code (optional):',c.rejectionCode||'');if(code===null){if(el)el.value=old;return;}
+    var code=prompt('Enter the IRS rejection code so everyone knows why the return failed:',c.rejectionCode||'');if(code===null){if(el)el.value=old;return;}if(!code.trim()){toast('The rejection code is required.');if(el)el.value=old;return;}
     c.rejectionCode=code.trim();c.rejectedDate=wfToday();extra=c.rejectionCode?' Code '+c.rejectionCode+'.':'';
-    if(c.prep==='Ready to Send'){c.prep='Needs Work';c.prepAt=Date.now();c.prepBy=wfActor();extra+=' Preparation set to Needs Work.';}
-    c.nextAction='Correct the rejection';c.nextActionOwner=c.preparer||(c.createdBy!=='Not recorded'?c.createdBy:'')||wfActor();c.nextActionDue=wfAddDays(wfToday(),1);
+    if(c.prep!=='Needs Work'){c.prep='Needs Work';c.prepAt=Date.now();c.prepBy=wfActor();extra+=' Preparation set to Needs Work.';}
+    c.nextAction='Correct the rejection ('+c.rejectionCode+') and resubmit';c.nextActionOwner=ccHandler(c)||wfActor();c.nextActionDue=wfAddDays(wfToday(),1);
   }
-  if(val==='Submitted'){c.submittedDate=wfToday();if(/rejection|resend/i.test(c.nextAction||'')){c.nextAction='';c.nextActionDue='';}}
-  if(val==='Resend'){c.nextAction='Resend the return to the IRS';c.nextActionOwner=c.preparer||(c.createdBy!=='Not recorded'?c.createdBy:'')||wfActor();c.nextActionDue=wfToday();}
+  if(val==='Submitted'||val==='Resubmitted'){c.submittedDate=wfToday();c.submittedBy=wfActor();if(val==='Resubmitted'){c.resubmittedDate=wfToday();if(c.prep==='Needs Work'){c.prep='Ready to Send';c.prepAt=Date.now();c.prepBy=wfActor();extra+=' Correction done — Preparation set to Ready to Send.';}}if(/rejection|resend|resubmit|send/i.test(c.nextAction||'')){c.nextAction='Watch for the IRS acceptance';c.nextActionDue=wfAddDays(wfToday(),3);c.nextActionOwner=wfActor();}}
+  if(val==='Accepted'){c.acceptedDate=wfToday();c.acceptedBy=wfActor();if(!c.finalBy){c.nextAction='Give the client their final numbers';c.nextActionOwner=ccHandler(c)||wfActor();c.nextActionDue=wfAddDays(wfToday(),1);}else{c.nextAction='';c.nextActionDue='';}}
+  if(val==='Resend'){c.nextAction='Resend the return to the IRS';c.nextActionOwner=ccHandler(c)||wfActor();c.nextActionDue=wfToday();}
   c.irs=val;c.irsAt=Date.now();c.irsBy=wfActor();
   ccLog(c,'Status Change','IRS: '+(old||CC_IRS_NONE)+' → '+(val||CC_IRS_NONE)+'.'+extra);wfAudit('IRS '+(old||CC_IRS_NONE)+' → '+(val||CC_IRS_NONE)+extra,c,'status');
-  if(val==='Rejected'&&c.nextActionOwner&&c.nextActionOwner!==wfActor())addInbox(c.nextActionOwner,'IRS rejected '+c.name+(c.rejectionCode?' ('+c.rejectionCode+')':'')+'. Correct and resend.');
+  if(val==='Rejected'&&c.nextActionOwner&&c.nextActionOwner!==wfActor())addInbox(c.nextActionOwner,'IRS rejected '+c.name+' (code '+c.rejectionCode+'). Correct it and resubmit.');
   ccTouch(c);fbSave();renderInbox();toast(c.name+': IRS '+(val||CC_IRS_NONE)+'.');ccAfterChange(id);
 }
 /* Re-render lists; if this client's record is open, refresh it in place. */
@@ -2092,9 +2146,11 @@ function ccAlerts(){
   var w=wfEnsure(),st=w.settings,out=[],fin=ccCan('viewFinance');
   w.clients.forEach(function(c){
     if(!ccIsActive(c))return;
-    var who=c.nextActionOwner||(c.createdBy!=='Not recorded'?c.createdBy:'')||'';
+    var who=c.nextActionOwner||ccHandler(c)||'';
     function add(sev,type,text){out.push({sev:sev,type:type,text:text,c:c,who:who});}
-    if(c.irs==='Rejected')add('red','IRS rejected','Rejected'+(c.rejectionCode?' ('+c.rejectionCode+')':'')+'. Correct the return, then set IRS Status to Resend.');
+    if(c.irs==='Rejected')add('red','IRS rejected','Rejected'+(c.rejectionCode?' (code '+c.rejectionCode+')':'')+'. Correct the return, then set IRS Status to Resend or Resubmitted.');
+    var ho=ccPendingHandoff(c);if(ho)out.push({sev:'yellow',type:'Handoff waiting',text:ho.from+' is handing this client to '+ho.to+'. Accept or decline it in Handoffs.',c:c,who:ho.to});
+    if((c.irs==='Submitted'||c.irs==='Resubmitted')&&ccDaysSince(c.irsAt)>7)add('yellow','No IRS answer yet',c.irs+' '+ccDaysSince(c.irsAt)+' days ago and not yet Accepted.');
     if(c.irs==='Resend')add('red','Resend to IRS','Marked Resend '+ccDaysSince(c.irsAt)+' day(s) ago. Send it and set IRS Status to Submitted.');
     if(!c.prep)add('yellow','No preparation status','Choose a Preparation Status so everyone knows where this return is.');
     if(c.prep==='Missing Documents'){var red=(c.checklist||[]).filter(function(i){return ccItemColor(i)==='red';}),never=red.filter(function(i){return i.status==='Missing';}),late=red.filter(function(i){return i.status==='Requested';});
@@ -2104,16 +2160,16 @@ function ccAlerts(){
       if(c.prep==='Ready to Send'){if(lim>0&&dd>=lim)add('yellow','Ready but not sent','Ready to Send for '+dd+' days and not yet submitted to the IRS.');}
       else if(lim>0&&dd>lim)add(dd>lim*2?'red':'yellow','Sitting too long','“'+c.prep+'” for '+dd+' days (target '+lim+').');}
     if(c.nextActionDue&&ccDateDiff(c.nextActionDue)<0)add('red','Next action overdue','“'+(c.nextAction||'Next action')+'” was due '+wfDate(c.nextActionDue)+'.');
-    if(fin&&ccBalance(c)>0&&c.irs==='Submitted')add('yellow','Unpaid balance',ccMoney(ccBalance(c))+' outstanding after submission.');
-    var la=ccLastActivity(c);if(la&&ccDaysSince(la)>Number(st.noActivityDays)&&c.irs!=='Submitted')add('yellow','No recent activity','Nothing logged for '+ccDaysSince(la)+' days.');
+    if(fin&&ccBalance(c)>0&&/Submitted|Resubmitted/.test(c.irs||''))add('yellow','Unpaid balance',ccMoney(ccBalance(c))+' outstanding after submission.');
+    var la=ccLastActivity(c);if(la&&ccDaysSince(la)>Number(st.noActivityDays)&&!/Submitted|Resubmitted/.test(c.irs||''))add('yellow','No recent activity','Nothing logged for '+ccDaysSince(la)+' days.');
   });
+  w.clients.forEach(function(c){if(c.irs==='Accepted'&&!c.finalBy&&c.nextAction)out.push({sev:'yellow',type:'Final numbers not given',text:'Accepted by the IRS; record when the client was given the final numbers.',c:c,who:c.nextActionOwner||ccHandler(c)});if(fin&&c.irs==='Accepted'&&ccBalance(c)>0)out.push({sev:'yellow',type:'Unpaid balance',text:ccMoney(ccBalance(c))+' outstanding on an accepted return.',c:c,who:ccHandler(c)});});
   return out.sort(function(a,b){return (a.sev==='red'?0:1)-(b.sev==='red'?0:1);});
 }
 function ccSeverity(c,alerts){var a=alerts.filter(function(x){return x.c.id===c.id;});if(a.some(function(x){return x.sev==='red';}))return'red';if(a.length)return'yellow';return'';}
-function ccMine(c,me){return c.createdBy===me||c.preparer===me||c.nextActionOwner===me;}
-
+function ccMine(c,me){return ccHandler(c)===me||c.preparer===me||c.nextActionOwner===me;}
 /* ── TABS & FILTERS ── */
-function wfSetTab(k){if(['clients','mywork','alerts','daily','reports','setup'].indexOf(k)>-1)wfTab=k;document.querySelectorAll('[data-wftab]').forEach(function(b){b.classList.toggle('active',b.dataset.wftab===wfTab);});document.querySelectorAll('[data-wfpane]').forEach(function(p){p.classList.toggle('active',p.dataset.wfpane===wfTab);});renderWorkflow();}
+function wfSetTab(k){if(['clients','mywork','alerts','handoffs','daily','reports','setup'].indexOf(k)>-1)wfTab=k;document.querySelectorAll('[data-wftab]').forEach(function(b){b.classList.toggle('active',b.dataset.wftab===wfTab);});document.querySelectorAll('[data-wfpane]').forEach(function(p){p.classList.toggle('active',p.dataset.wfpane===wfTab);});renderWorkflow();}
 function wfStaffNames(){return (S.employees||[]).filter(function(e){return e.status==='Active';}).map(function(e){return e.name;}).sort();}
 function wfPopulateSelect(id,items,first,labels){var el=document.getElementById(id);if(!el)return;var cur=el.value;el.innerHTML='<option value="">'+first+'</option>'+items.map(function(x){return'<option value="'+esc(x)+'">'+esc(labels&&labels[x]||x)+'</option>';}).join('');if(items.indexOf(cur)>-1)el.value=cur;}
 const CC_QUICK=[
@@ -2121,19 +2177,17 @@ const CC_QUICK=[
   ['missing','Open checklist items',function(c){return ccIsActive(c)&&ccOutstanding(c,'prep').length>0;}],
   ['quiet','No recent activity',function(c){return ccIsActive(c)&&ccDaysSince(ccLastActivity(c))>Number(wfEnsure().settings.noActivityDays);}],
   ['unpaid','Unpaid balance',function(c){return ccCan('viewFinance')&&ccBalance(c)>0;}],
-  ['closed','Show opted-out & archived',null]
+  ['open','Open returns only',function(c){return ccIsActive(c);}]
 ];
 function ccToggleQuick(k){ccQuick[k]=!ccQuick[k];renderWorkflow();}
-function ccSetFilter(prep,irs){var p=document.getElementById('ccFPrep'),i=document.getElementById('ccFIrs');if(p)p.value=prep||'';if(i)i.value=irs||'';if(prep==='Client Opts Out')ccQuick.closed=true;wfSetTab('clients');}
+function ccSetFilter(prep,irs){var p=document.getElementById('ccFPrep'),i=document.getElementById('ccFIrs');if(p)p.value=prep||'';if(i)i.value=irs||'';ccQuick.open=false;wfSetTab('clients');}
 function ccClearFilters(){['wfSearch','ccFPrep','ccFIrs','ccFYear','wfStaffFilter','wfOfficeFilter','ccFService'].forEach(function(id){var e=document.getElementById(id);if(e)e.value='';});ccQuick={};renderWorkflow();}
 function wfFilteredClients(alerts){
   var w=wfEnsure(),q=(tv('wfSearch')||'').toLowerCase().trim(),prep=tv('ccFPrep'),irs=tv('ccFIrs'),yr=tv('ccFYear'),staff=tv('wfStaffFilter'),office=tv('wfOfficeFilter'),svc=tv('ccFService');
-  var showClosed=ccQuick.closed||prep==='Client Opts Out';
   return w.clients.filter(function(c){
-    if(!showClosed&&!ccIsActive(c))return false;
-    if(q&&[c.name,c.clientId,c.createdBy,c.preparer,c.nextAction,c.nextActionOwner,c.notes,c.service].join(' ').toLowerCase().indexOf(q)<0)return false;
+    if(q&&[c.name,c.clientId,c.createdBy,ccHandler(c),c.rejectionCode,c.preparer,c.nextAction,c.nextActionOwner,c.notes,c.service].join(' ').toLowerCase().indexOf(q)<0)return false;
     if(prep&&(prep==='_none'?c.prep:c.prep!==prep))return false;
-    if(irs&&(irs==='_none'?c.irs:c.irs!==irs))return false;
+    if(irs&&(irs==='_none'?c.irs:(irs==='Submitted'?!/Submitted|Resubmitted/.test(c.irs||''):c.irs!==irs)))return false;
     if(prep==='Ready to Send'&&!irs&&c.irs)return false; /* the card counts ones not yet sent */
     if(yr&&String(c.taxYear)!==yr)return false;
     if(staff&&!ccMine(c,staff))return false;
@@ -2142,25 +2196,25 @@ function wfFilteredClients(alerts){
     if(ccQuick.attention&&!ccSeverity(c,alerts))return false;
     for(var i=0;i<CC_QUICK.length;i++){var qk=CC_QUICK[i];if(qk[2]&&ccQuick[qk[0]]&&!qk[2](c))return false;}
     return true;
-  }).sort(function(a,b){var ra=ccSeverity(a,alerts)==='red'?0:1,rb=ccSeverity(b,alerts)==='red'?0:1;return ra-rb||String(a.name).localeCompare(String(b.name));});
+  }).sort(function(a,b){var ra=ccSeverity(a,alerts)==='red'?0:1,rb=ccSeverity(b,alerts)==='red'?0:1;var oa=ccIsActive(a)?0:1,ob=ccIsActive(b)?0:1;return ra-rb||oa-ob||String(a.name).localeCompare(String(b.name));});
 }
 
 /* ── RENDER ── */
 function ccRowHtml(c,alerts){
-  var sev=ccSeverity(c,alerts),m=ccMissing(c),dd=ccDateDiff(c.nextActionDue),dcls=dd===null?'ok':dd<0?'over':dd===0?'today':'ok',fin=ccCan('viewFinance'),bal=ccBalance(c),la=ccLastActivity(c);
+  var ho=ccPendingHandoff(c),sev=ccSeverity(c,alerts),m=ccMissing(c),dd=ccDateDiff(c.nextActionDue),dcls=dd===null?'ok':dd<0?'over':dd===0?'today':'ok',fin=ccCan('viewFinance'),bal=ccBalance(c),la=ccLastActivity(c);
   var miss=(m.red||m.yellow)?'<div class="cc-miss" title="'+(m.red+m.yellow)+' open checklist items">'+(m.red?'<span><i class="cc-dot red"></i>'+m.red+'</span>':'')+(m.yellow?'<span><i class="cc-dot yellow"></i>'+m.yellow+'</span>':'')+'</div>':'<div class="cc-miss"><span><i class="cc-dot green"></i>None</span></div>';
   return'<div class="cc-row sev-'+(sev||'none')+(ccIsActive(c)?'':' closed')+'" onclick="ccOpenProfile('+c.id+')">'
-    +'<div class="c-client"><div class="cc-name">'+esc(c.name)+'</div><div class="cc-sub">'+esc(c.clientId||'')+' · '+esc(c.taxYear||'')+' · '+esc(c.service||'')+' · '+esc(c.office||'')+(fin&&bal>0?' · <strong style="color:var(--red)">'+ccMoney(bal)+' due</strong>':'')+(c.archived?' · <strong>Archived</strong>':'')+'</div></div>'
-    +'<div class="c-by"><div class="cc-lbl-m">Created by</div><div style="font-weight:700">'+esc(c.createdBy||'Not recorded')+'</div><div class="cc-sub">'+(c.createdAt?fs(new Date(c.createdAt)):'')+'</div></div>'
+    +'<div class="c-client"><div class="cc-name">'+esc(c.name)+'</div><div class="cc-sub">'+esc(c.clientId||'')+' · '+esc(c.taxYear||'')+' · '+esc(c.service||'')+' · '+esc(c.office||'')+(fin&&bal>0?' · <strong style="color:var(--red)">'+ccMoney(bal)+' due</strong>':'')+(c.irs==='Accepted'?' · <strong style="color:var(--green)">Done</strong>':'')+(c.prep==='Client Opted Out'?' · <strong>Opted out</strong>':'')+'</div></div>'
+    +'<div class="c-by"><div class="cc-lbl-m">Created by / now with</div><div style="font-weight:700">'+esc(c.createdBy||'Not recorded')+'</div><div class="cc-sub">'+(ccHandler(c)&&ccHandler(c)!==c.createdBy?'Now with <strong>'+esc(ccHandler(c))+'</strong>':(c.createdAt?fs(new Date(c.createdAt)):''))+(ho?'<br><span class="cc-pill cc-pill-amber" style="padding:1px 6px">Handoff → '+esc(ho.to)+'</span>':'')+'</div></div>'
     +'<div class="c-prep"><div class="cc-lbl-m">Preparation</div>'+ccPrepSelect(c)+'</div>'
     +'<div class="c-irs"><div class="cc-lbl-m">IRS</div>'+ccIrsSelect(c)+(c.irs==='Rejected'&&c.rejectionCode?'<div class="cc-sub" style="color:var(--red)">Code '+esc(c.rejectionCode)+'</div>':'')+'</div>'
     +'<div class="c-miss">'+miss+'</div>'
-    +'<div class="c-next"><div style="font-weight:700;color:var(--navy)">'+esc(c.nextAction||'—')+'</div>'+(c.nextAction?'<div class="cc-sub">'+esc(c.nextActionOwner||'Unassigned')+(c.nextActionDue?' · <span class="cc-due '+dcls+'">'+(dd<0?'Overdue ':'Due ')+wfDate(c.nextActionDue)+'</span>':'')+'</div>':'')+'</div>'
+    +'<div class="c-next"><div style="font-weight:700;color:var(--navy)">'+(ccReminders(c).length?'&#128204; ':'')+esc(c.nextAction||'—')+'</div>'+(c.nextAction?'<div class="cc-sub">'+esc(c.nextActionOwner||'Unassigned')+(c.nextActionDue?' · <span class="cc-due '+dcls+'">'+(dd<0?'Overdue ':'Due ')+wfDate(c.nextActionDue)+'</span>':'')+'</div>':'')+'</div>'
     +'<div class="c-act cc-sub" style="margin:0">'+(la?rt(la):'—')+'</div>'
-    +'<div class="cc-row-acts c-acts" onclick="event.stopPropagation()"><button class="ic-btn" title="Log contact or note" onclick="ccOpenLog('+c.id+')">&#9742;</button></div>'
+    +'<div class="cc-row-acts c-acts" onclick="event.stopPropagation()">'+(c.folderUrl?'<a class="ic-btn" title="Open in TaxDome" href="'+esc(c.folderUrl)+'" target="_blank" rel="noopener" style="text-decoration:none">&#8599;</a>':'')+'<button class="ic-btn" title="Add a note" onclick="ccOpenLog('+c.id+')">&#128221;</button><button class="ic-btn" title="Hand off" onclick="wfOpenHandoff('+c.id+')">&#129309;</button></div>'
     +'</div>';
 }
-function ccRowHead(){return'<div class="cc-row head"><div>Client</div><div>Created By</div><div>Preparation Status</div><div>IRS Status</div><div>Missing</div><div>Next Action</div><div>Activity</div><div></div></div>';}
+function ccRowHead(){return'<div class="cc-row head"><div>Client</div><div>Created By / Now With</div><div>Preparation Status</div><div>IRS Status</div><div>Missing</div><div>Next Action</div><div>Activity</div><div></div></div>';}
 function renderWorkflow(){
   if(!document.querySelector('[data-s="workflow"]'))return;var w=wfEnsure();
   var si=document.getElementById('wfSignedInAs');if(si)si.textContent=CU?CU.name+' · '+ccMyRole():'';
@@ -2179,45 +2233,52 @@ function renderWorkflow(){
   var rows=document.getElementById('wfClientRows');if(rows){var cs=wfFilteredClients(alerts);var lc=document.getElementById('ccListCount');if(lc)lc.textContent=cs.length+' client record'+(cs.length===1?'':'s');rows.innerHTML=cs.length?ccRowHead()+cs.map(function(c){return ccRowHtml(c,alerts);}).join(''):'<div class="empty">No clients match these filters.</div>';}
   ccRenderMyWork(w,alerts);
   ccRenderAlerts(w,alerts,me);
-  var dr=document.getElementById('wfDailyRows');if(dr){var lt=tv('ccLogType');var acts=w.activities.filter(function(a){return!lt||(a.type||a.method)===lt;}).slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);});dr.innerHTML=acts.length?acts.slice(0,500).map(function(a){return'<tr style="cursor:pointer" onclick="ccOpenProfile('+a.clientRecordId+')"><td>'+wfWhen(a.ts)+'</td><td><strong>'+esc(a.clientName)+'</strong></td><td>'+esc(a.staff)+'</td><td>'+esc(a.type||a.method)+(a.pinned?' &#128204;':'')+'</td><td>'+esc(a.summary)+'</td><td>'+esc(a.nextAction||'—')+'</td><td>'+wfDate(a.followUpDate)+'</td></tr>';}).join(''):'<tr><td colspan="7"><div class="empty">No client activity logged yet.</div></td></tr>';}
+  wfPopulateSelect('ccLogStaff',wfStaffNames(),'All Employees');var ld=document.getElementById('ccLogDate');if(ld&&!ld.dataset.init){ld.dataset.init='1';ld.value=wfToday();}
+  ccRenderDay(w);
+  wfRenderHandoffs(w);
+  var dr=document.getElementById('wfDailyRows');if(dr){var lt=tv('ccLogType'),lst=tv('ccLogStaff'),ldt=tv('ccLogDate');var acts=w.activities.filter(function(a){return(!lt||(a.type||a.method)===lt)&&(!lst||a.staff===lst)&&(!ldt||ldate(a.ts)===ldt);}).slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);});dr.innerHTML=acts.length?acts.slice(0,500).map(function(a){return'<tr style="cursor:pointer" onclick="ccOpenProfile('+a.clientRecordId+')"><td>'+wfWhen(a.ts)+'</td><td><strong>'+esc(a.clientName)+'</strong></td><td>'+esc(a.staff)+'</td><td>'+esc(a.type||a.method)+(a.pinned?' &#128204;':'')+'</td><td>'+esc(a.done||a.summary)+(a.result?'<div class="wf-muted">'+esc(a.result)+'</div>':'')+'</td><td>'+esc(a.needed||a.nextAction||'—')+(a.owner?'<div class="wf-muted">'+esc(a.owner)+'</div>':'')+'</td><td>'+wfDate(a.followUpDate)+'</td></tr>';}).join(''):'<tr><td colspan="7"><div class="empty">No activity for this day / filter.</div></td></tr>';}
   if(ccCan('viewReports'))ccRenderReports(w,alerts);
   ccRenderSetup(w);
 }
 /* At-a-glance status cards; clicking one filters the list. */
 function ccRenderCards(w){
   var el=document.getElementById('ccStatusCards');if(!el)return;
-  var office=tv('wfOfficeFilter'),base=w.clients.filter(function(c){return !c.archived&&(!office||c.office===office);}),act=base.filter(ccIsActive);
+  var office=tv('wfOfficeFilter'),base=w.clients.filter(function(c){return !office||c.office===office;}),act=base.filter(ccIsActive);
   var curP=tv('ccFPrep'),curI=tv('ccFIrs');
   function card(label,n,cls,p,i,sub){var on=(p&&curP===p&&!curI)||(i&&curI===i&&!curP);return'<button class="cc-scard cc-sc-'+cls+(on?' on':'')+'" onclick="ccSetFilter(\''+(p||'')+'\',\''+(i||'')+'\')"><div class="n">'+n+'</div><div class="t">'+label+'</div>'+(sub?'<div class="s">'+sub+'</div>':'')+'</button>';}
   el.innerHTML='<div class="cc-sgroup"><div class="cc-sgroup-t">Preparation Status</div><div class="cc-sgroup-c">'
     +card('Missing Documents',act.filter(function(c){return c.prep==='Missing Documents';}).length,'red','Missing Documents')
-    +card('Needs Work',act.filter(function(c){return c.prep==='Needs Work';}).length,'amber','Needs Work')
     +card('Ready to Send',act.filter(function(c){return c.prep==='Ready to Send'&&!c.irs;}).length,'green','Ready to Send','','not yet submitted')
-    +card('Client Opts Out',base.filter(function(c){return c.prep==='Client Opts Out';}).length,'grey','Client Opts Out')
+    +card('Needs Work',act.filter(function(c){return c.prep==='Needs Work';}).length,'amber','Needs Work')
+    +card('Client Opted Out',base.filter(function(c){return c.prep==='Client Opted Out';}).length,'grey','Client Opted Out')
     +'</div></div><div class="cc-sgroup"><div class="cc-sgroup-t">IRS Status</div><div class="cc-sgroup-c">'
-    +card('Submitted',act.filter(function(c){return c.irs==='Submitted';}).length,'blue','','Submitted')
+    +card('Submitted',act.filter(function(c){return c.irs==='Submitted'||c.irs==='Resubmitted';}).length,'blue','','Submitted','incl. resubmitted')
+    +card('Accepted',base.filter(function(c){return c.irs==='Accepted';}).length,'green','','Accepted')
     +card('Rejected',act.filter(function(c){return c.irs==='Rejected';}).length,'red','','Rejected')
     +card('Resend',act.filter(function(c){return c.irs==='Resend';}).length,'amber','','Resend')
     +'</div></div>';
 }
+/* What each employee did on the chosen day. */
+function ccRenderDay(w){var el=document.getElementById('ccDaySummary');if(!el)return;var d=tv('ccLogDate');var acts=w.activities.filter(function(a){return!d||ldate(a.ts)===d;});var by={};acts.forEach(function(a){var s=a.staff||'—';if(!by[s])by[s]={n:0,notes:0,status:0,clients:{}};by[s].n++;if(a.type==='Status Change')by[s].status++;else if(a.done||CC_CONTACT_TYPES.indexOf(a.type)>-1||a.type==='Internal Note')by[s].notes++;by[s].clients[a.clientRecordId]=1;});var names=Object.keys(by).sort(function(a,b){return by[b].n-by[a].n;});el.innerHTML=names.length?names.map(function(n){var r=by[n];return'<button class="cc-scard" onclick="document.getElementById(\'ccLogStaff\').value=\''+esc(n).replace(/'/g,'')+'\';renderWorkflow()"><div class="n">'+Object.keys(r.clients).length+'</div><div class="t">'+esc(n)+'</div><div class="s">clients touched · '+r.notes+' notes · '+r.status+' status changes</div></button>';}).join(''):'<div class="empty">No activity '+(d?'on '+wfDate(d):'')+'.</div>';}
 function ccRenderMyWork(w,alerts){
   var who=document.getElementById('ccMyWho'),me=wfActor();
   if(who){if(ccCan('viewReports')){who.style.display='';var cur=who.value||me;who.innerHTML=wfStaffNames().map(function(n){return'<option '+(n===cur?'selected':'')+'>'+esc(n)+'</option>';}).join('');me=who.value||me;}else who.style.display='none';}
   var tt=document.getElementById('ccMyTitle');if(tt)tt.textContent=me===wfActor()?'My Work Today':me+' — Work Today';
-  var mine=w.clients.filter(function(c){return ccIsActive(c)&&ccMine(c,me);});
+  var mine=w.clients.filter(function(c){var h=ccPendingHandoff(c);return ccIsActive(c)&&(ccMine(c,me)||(h&&h.to===me));});
   var groups=[
+    ['&#129309;','Handoffs waiting for you',function(c){var h=ccPendingHandoff(c);return h&&h.to===me;},'accept or decline'],
     ['&#128308;','IRS rejected or needs resend',function(c){return c.irs==='Rejected'||c.irs==='Resend';},'fix and send these first'],
     ['&#9888;&#65039;','Overdue or blocked',function(c){return ccSeverity(c,alerts)==='red';}],
     ['&#128196;','Missing Documents',function(c){return c.prep==='Missing Documents';},'follow up with the client'],
     ['&#128736;','Needs Work',function(c){return c.prep==='Needs Work';}],
     ['&#9989;','Ready to Send',function(c){return c.prep==='Ready to Send'&&!c.irs;},'submit to the IRS'],
     ['&#10067;','No preparation status',function(c){return !c.prep;}],
-    ['&#128228;','Submitted to the IRS',function(c){return c.irs==='Submitted';}]
+    ['&#128228;','Waiting on the IRS',function(c){return c.irs==='Submitted'||c.irs==='Resubmitted';}]
   ];
-  var k=document.getElementById('ccMyKpis');if(k)k.innerHTML=[['My Active Clients',mine.length],['Rejected / Resend',mine.filter(groups[0][2]).length],['Missing Documents',mine.filter(groups[2][2]).length],['Needs Work',mine.filter(groups[3][2]).length],['Ready to Send',mine.filter(groups[4][2]).length]].map(function(x,i){return'<div class="wf-kpi"'+(i===1&&x[1]?' style="background:#fff3f3;border-color:#efcaca"':'')+'><div class="n">'+x[1]+'</div><div class="t">'+x[0]+'</div></div>';}).join('');
+  var k=document.getElementById('ccMyKpis');if(k)k.innerHTML=[['My Open Returns',mine.length],['Rejected / Resend',mine.filter(groups[1][2]).length],['Missing Documents',mine.filter(groups[3][2]).length],['Needs Work',mine.filter(groups[4][2]).length],['Ready to Send',mine.filter(groups[5][2]).length]].map(function(x,i){return'<div class="wf-kpi"'+(i===1&&x[1]?' style="background:#fff3f3;border-color:#efcaca"':'')+'><div class="n">'+x[1]+'</div><div class="t">'+x[0]+'</div></div>';}).join('');
   var used={},html='';
   groups.forEach(function(g){var list=mine.filter(function(c){return!used[c.id]&&g[2](c);});list.forEach(function(c){used[c.id]=1;});list.sort(function(a,b){return (a.nextActionDue||'9999').localeCompare(b.nextActionDue||'9999');});if(list.length)html+='<div class="cc-group"><div class="cc-group-title">'+g[0]+' '+g[1]+' <span class="meta" style="margin:0;font-weight:600;text-transform:none;letter-spacing:0">'+list.length+(g[3]?' · '+g[3]:'')+'</span></div>'+ccRowHead()+list.map(function(c){return ccRowHtml(c,alerts);}).join('')+'</div>';});
-  var urgent=mine.filter(function(c){return groups[0][2](c)||groups[1][2](c);}).length;
+  var urgent=mine.filter(function(c){return groups[0][2](c)||groups[1][2](c)||groups[2][2](c);}).length;
   var mc=document.getElementById('ccMyCount');if(mc)mc.textContent=urgent?'('+urgent+')':'';
   var g=document.getElementById('ccMyGroups');if(g)g.innerHTML=html||'<div class="empty">Nothing needs '+(me===wfActor()?'you':esc(me))+' right now. &#127881;</div>';
 }
@@ -2240,10 +2301,10 @@ function ccRenderReports(w,alerts){
   var sub=w.clients.filter(function(c){return c.submittedDate&&c.createdAt;}),tat=sub.map(function(c){return Math.max(0,(ccTs(c.submittedDate)-c.createdAt)/86400000);}),avg=tat.length?Math.round(tat.reduce(function(a,b){return a+b;},0)/tat.length):0;
   var stale=act.filter(function(c){return alerts.some(function(a){return a.c.id===c.id&&(a.type==='Sitting too long'||a.type==='Ready but not sent');});});
   var bal=w.clients.reduce(function(a,c){return a+ccBalance(c);},0);
-  var k=document.getElementById('wfKpis');if(k)k.innerHTML=[['Active Clients',act.length],['Missing Documents',np('Missing Documents')],['Needs Work',np('Needs Work')],['Ready to Send',act.filter(function(c){return c.prep==='Ready to Send'&&!c.irs;}).length],['Submitted (7 days)',w.clients.filter(function(c){return c.submittedDate&&c.submittedDate>=wk;}).length],['Rejected / Resend',ni('Rejected')+ni('Resend')],['Avg Days to Submit',tat.length?avg:'—'],['Sitting Too Long',stale.length]].concat(fin?[['Outstanding Balances',ccMoney(bal)]]:[]).map(function(x){return'<div class="wf-kpi"><div class="n">'+x[1]+'</div><div class="t">'+x[0]+'</div></div>';}).join('');
-  var pb=document.getElementById('ccPrepBars');if(pb)ccBars(pb,CC_PREP.map(function(s){return[s.k,w.clients.filter(function(c){return !c.archived&&c.prep===s.k;}).length,CC_COLORS[s.cls]];}).concat([[CC_PREP_NONE,act.filter(function(c){return!c.prep;}).length,CC_COLORS.none]]));
-  var ib=document.getElementById('ccIrsBars');if(ib)ccBars(ib,[[CC_IRS_NONE,act.filter(function(c){return!c.irs;}).length,CC_COLORS.none]].concat(CC_IRS.map(function(s){return[s.k,ni(s.k),CC_COLORS[s.cls]];})));
-  var wl=document.getElementById('ccWorkload');if(wl){var names=Array.from(new Set(act.map(function(c){return c.createdBy||'Not recorded';})));wl.innerHTML=names.map(function(n){var l=act.filter(function(c){return (c.createdBy||'Not recorded')===n;});return{n:n,t:l.length,m:l.filter(function(c){return c.prep==='Missing Documents';}).length,nw:l.filter(function(c){return c.prep==='Needs Work';}).length,r:l.filter(function(c){return c.prep==='Ready to Send'&&!c.irs;}).length,s:l.filter(function(c){return c.irs==='Submitted';}).length,x:l.filter(function(c){return c.irs==='Rejected'||c.irs==='Resend';}).length};}).sort(function(a,b){return b.t-a.t;}).map(function(r){return'<tr><td><strong>'+esc(r.n)+'</strong></td><td>'+r.t+'</td><td>'+r.m+'</td><td>'+r.nw+'</td><td>'+r.r+'</td><td>'+r.s+'</td><td style="color:'+(r.x?'var(--red)':'inherit')+';font-weight:'+(r.x?800:400)+'">'+r.x+'</td></tr>';}).join('')||'<tr><td colspan="7"><div class="empty">No active clients.</div></td></tr>';}
+  var k=document.getElementById('wfKpis');if(k)k.innerHTML=[['Active Clients',act.length],['Missing Documents',np('Missing Documents')],['Needs Work',np('Needs Work')],['Ready to Send',act.filter(function(c){return c.prep==='Ready to Send'&&!c.irs;}).length],['Submitted (7 days)',w.clients.filter(function(c){return c.submittedDate&&c.submittedDate>=wk;}).length],['Accepted (7 days)',w.clients.filter(function(c){return c.acceptedDate&&c.acceptedDate>=wk;}).length],['Rejected / Resend',ni('Rejected')+ni('Resend')],['Avg Days to Submit',tat.length?avg:'—'],['Client Opted Out',w.clients.filter(function(c){return c.prep==='Client Opted Out';}).length],['Sitting Too Long',stale.length]].concat(fin?[['Outstanding Balances',ccMoney(bal)]]:[]).map(function(x){return'<div class="wf-kpi"><div class="n">'+x[1]+'</div><div class="t">'+x[0]+'</div></div>';}).join('');
+  var pb=document.getElementById('ccPrepBars');if(pb)ccBars(pb,CC_PREP.map(function(s){return[s.k,w.clients.filter(function(c){return c.prep===s.k&&(s.k==='Client Opted Out'||c.irs!=='Accepted');}).length,CC_COLORS[s.cls]];}).concat([[CC_PREP_NONE,act.filter(function(c){return!c.prep;}).length,CC_COLORS.none]]));
+  var ib=document.getElementById('ccIrsBars');if(ib)ccBars(ib,[[CC_IRS_NONE,act.filter(function(c){return!c.irs;}).length,CC_COLORS.none]].concat(CC_IRS.map(function(s){return[s.k,w.clients.filter(function(c){return c.irs===s.k;}).length,CC_COLORS[s.cls]];})));
+  var wl=document.getElementById('ccWorkload');if(wl){var names=Array.from(new Set(w.clients.map(function(c){return c.createdBy||'Not recorded';})));wl.innerHTML=names.map(function(n){var l=w.clients.filter(function(c){return (c.createdBy||'Not recorded')===n;});return{n:n,t:l.length,m:l.filter(function(c){return c.prep==='Missing Documents';}).length,nw:l.filter(function(c){return c.prep==='Needs Work';}).length,r:l.filter(function(c){return c.prep==='Ready to Send'&&!c.irs;}).length,s:l.filter(function(c){return c.irs==='Accepted';}).length,x:l.filter(function(c){return c.irs==='Rejected'||c.irs==='Resend';}).length};}).sort(function(a,b){return b.t-a.t;}).map(function(r){return'<tr><td><strong>'+esc(r.n)+'</strong></td><td>'+r.t+'</td><td>'+r.m+'</td><td>'+r.nw+'</td><td>'+r.r+'</td><td>'+r.s+'</td><td style="color:'+(r.x?'var(--red)':'inherit')+';font-weight:'+(r.x?800:400)+'">'+r.x+'</td></tr>';}).join('')||'<tr><td colspan="7"><div class="empty">No active clients.</div></td></tr>';}
   var cp=document.getElementById('ccCompletions');if(cp){var days=[];for(var i=6;i>=0;i--){var d=wfAddDays(wfToday(),-i);days.push([fs(d),w.clients.filter(function(c){return c.submittedDate===d;}).length,'var(--teal)']);}ccBars(cp,days);cp.innerHTML+='<div class="meta" style="margin-top:8px">This week: <strong>'+days.reduce(function(a,x){return a+x[1];},0)+'</strong> submitted</div>';}
   var ol=document.getElementById('ccOfficeLoad');if(ol)ol.innerHTML=ccOffices().map(function(o){var l=act.filter(function(c){return c.office===o;});return'<tr><td><strong>'+esc(o)+'</strong></td><td>'+l.length+'</td><td>'+l.filter(function(c){return c.prep==='Missing Documents';}).length+'</td><td>'+l.filter(function(c){return c.prep==='Needs Work';}).length+'</td><td>'+l.filter(function(c){return c.prep==='Ready to Send'&&!c.irs;}).length+'</td><td>'+l.filter(function(c){return c.irs==='Rejected'||c.irs==='Resend';}).length+'</td><td>'+(fin?ccMoney(w.clients.filter(function(c){return c.office===o;}).reduce(function(a,c){return a+ccBalance(c);},0)):'—')+'</td></tr>';}).join('');
   var sl=document.getElementById('ccStale');if(sl)sl.innerHTML=stale.length?stale.sort(function(a,b){return (a.prepAt||0)-(b.prepAt||0);}).slice(0,15).map(function(c){return'<div class="cc-alert red" onclick="ccOpenProfile('+c.id+')"><div style="flex:1"><strong>'+esc(c.name)+'</strong> · '+esc(c.prep)+'<div class="wf-muted">'+ccDaysSince(c.prepAt)+' days in this status · created by '+esc(c.createdBy||'—')+'</div></div></div>';}).join(''):'<div class="empty">Nothing is past its target.</div>';
@@ -2253,47 +2314,70 @@ function ccRenderReports(w,alerts){
 /* ── CLIENT RECORD ── */
 function ccOpenProfile(id,refresh){
   var c=ccFind(id);if(!c){toast('Client not found.');return;}
-  var key=c.id+'|'+wfActor();if(!refresh&&(!ccViewed[key]||Date.now()-ccViewed[key]>15*60000)){ccViewed[key]=Date.now();wfAudit('Viewed client record',c,'view');fbSave();}
-  var w=wfEnsure(),alerts=ccAlerts().filter(function(a){return a.c.id===c.id;}),fin=ccCan('viewFinance'),bal=ccBalance(c),dd=ccDateDiff(c.nextActionDue),pd=ccPrepDef(c.prep),idf=ccIrsDef(c.irs);
-  var tags=[c.clientId,c.service,'Tax year '+c.taxYear,c.office].filter(Boolean).map(function(t){return'<span class="cc-tag">'+esc(t)+'</span>';}).join('')+(c.archived?'<span class="cc-tag" style="background:#EEF1F3">Archived</span>':'');
+  /* views are logged, but ride along with the next save instead of forcing one */
+  var key=c.id+'|'+wfActor();if(!refresh&&(!ccViewed[key]||Date.now()-ccViewed[key]>15*60000)){ccViewed[key]=Date.now();wfAudit('Viewed client record',c,'view');}
+  var w=wfEnsure(),alerts=ccAlerts().filter(function(a){return a.c.id===c.id;}),fin=ccCan('viewFinance'),bal=ccBalance(c),pd=ccPrepDef(c.prep),idf=ccIrsDef(c.irs),ho=ccPendingHandoff(c),handler=ccHandler(c);
+  var tags=[c.clientId,c.service,'Tax year '+c.taxYear,c.office].filter(Boolean).map(function(t){return'<span class="cc-tag">'+esc(t)+'</span>';}).join('')+(c.irs==='Accepted'?'<span class="cc-tag" style="background:#E6F4EC">Done</span>':'')+(c.prep==='Client Opted Out'?'<span class="cc-tag" style="background:#EEF1F3">Opted out</span>':'');
   var missList=(c.checklist||[]).filter(function(i){return i.status!=='Received'&&i.status!=='N/A';});
   var glance='<div class="cc-glance">'
-    +'<div class="cc-q"><div class="q">1 · Created by</div><div class="a">'+esc(c.createdBy||'Not recorded')+'</div><div class="s">'+wfWhen(c.createdAt)+(c.preparer?'<br>Preparer: <strong>'+esc(c.preparer)+'</strong>':'')+'</div></div>'
-    +'<div class="cc-q cc-q-'+(pd?pd.cls:'none')+'"><div class="q">2 · Preparation Status</div><div class="a">'+ccPrepSelect(c)+'</div><div class="s">'+esc(pd?pd.def:'Not set yet.')+(c.prepBy?'<br>Set by '+esc(c.prepBy)+' · '+ccDaysSince(c.prepAt)+'d ago':'')+(missList.length?'<br><strong>'+missList.length+' checklist item'+(missList.length>1?'s':'')+' open</strong>':'')+'</div></div>'
-    +'<div class="cc-q cc-q-'+(idf?idf.cls:'none')+'"><div class="q">3 · IRS Status</div><div class="a">'+ccIrsSelect(c)+'</div><div class="s">'+esc(idf?idf.def:'Not submitted yet.')+(c.irsBy?'<br>Set by '+esc(c.irsBy)+' · '+wfWhen(c.irsAt):'')+(c.irs==='Rejected'&&c.rejectionCode?'<br><strong style="color:var(--red)">Code '+esc(c.rejectionCode)+'</strong>':'')+'</div></div>'
-    +'<div class="cc-q '+(dd!==null&&dd<0?'cc-q-red':'')+'"><div class="q">What happens next</div><div class="a">'+esc(c.nextAction||'No next action set')+'</div><div class="s">'+(c.nextAction?'Responsible: <strong>'+esc(c.nextActionOwner||'—')+'</strong><br>'+(c.nextActionDue?(dd<0?'<strong style="color:var(--red)">Overdue</strong> — was due ':'Due ')+wfDate(c.nextActionDue):'No due date'):'<a href="#" onclick="ccOpenNext('+c.id+');return false">Set the next action</a>')+'</div></div>'
+    +'<div class="cc-q"><div class="q">1 · Created by</div><div class="a">'+esc(c.createdBy||'Not recorded')+'</div><div class="s">'+wfWhen(c.createdAt)+'<br>Now with: <strong>'+esc(handler||'—')+'</strong>'+(ho?'<br><span style="color:#7A5412;font-weight:700">Handoff to '+esc(ho.to)+' waiting</span>':'')+'</div></div>'
+    +'<div class="cc-q cc-q-'+(pd?pd.cls:'none')+'"><div class="q">2 · Preparation Status</div><div class="a">'+ccPrepSelect(c)+'</div><div class="s">'+esc(pd?pd.def:'Not set yet.')+(c.prepBy?'<br>Set by '+esc(c.prepBy)+' · '+wfWhen(c.prepAt):'')+'</div></div>'
+    +'<div class="cc-q cc-q-'+(idf?idf.cls:'none')+'"><div class="q">3 · IRS Status</div><div class="a">'+ccIrsSelect(c)+'</div><div class="s">'+esc(idf?idf.def:'Not submitted yet.')+(c.irsBy?'<br>Set by '+esc(c.irsBy)+' · '+wfWhen(c.irsAt):'')+'</div>'+(c.rejectionCode?'<div class="cc-code">Rejection code: <strong>'+esc(c.rejectionCode)+'</strong> <a href="#" onclick="ccEditCode('+c.id+');return false">edit</a></div>':(c.irs==='Rejected'?'<div class="cc-code"><a href="#" onclick="ccEditCode('+c.id+');return false">Enter the rejection code</a></div>':''))+'</div>'
     +'</div>';
+  /* who started it, who sent it, who finished it, who told the client */
+  var hs=(w.handoffs||[]).filter(function(h){return Number(h.clientRecordId)===Number(c.id)&&h.status==='Accepted';}).sort(function(a,b){return (a.respondedAt||0)-(b.respondedAt||0);});
+  var trail=[['Started',c.createdBy||'Not recorded',c.createdAt?wfWhen(c.createdAt):'']].concat(hs.map(function(h){return['Handed off',h.from+' → '+h.to,wfWhen(h.respondedAt)];}));
+  if(c.submittedBy)trail.push([c.resubmittedDate?'Resubmitted':'Submitted',c.submittedBy,wfDate(c.submittedDate)]);
+  if(c.acceptedBy)trail.push(['Accepted',c.acceptedBy,wfDate(c.acceptedDate)]);
+  trail.push(['Final numbers given',c.finalBy||'Not yet',c.finalBy?wfDate(c.finalDate)+(c.finalHow?' · '+c.finalHow:''):'']);
+  var trailHtml='<div class="cc-trail">'+trail.map(function(t,i){return'<div class="cc-step'+(t[1]==='Not yet'?' todo':'')+'"><div class="k">'+esc(t[0])+'</div><div class="v">'+esc(t[1])+'</div><div class="d">'+esc(t[2])+'</div></div>'+(i<trail.length-1?'<div class="cc-arrow">›</div>':'');}).join('')+'</div>';
   var bar='<div class="cc-actbar">'
-    +'<button class="btn-sm" onclick="ccOpenNext('+c.id+')">&#127919; Set next action</button>'
-    +'<button class="btn-sm" onclick="ccOpenLog('+c.id+')">&#9742; Log contact / note</button>'
+    +'<button class="btn-pri" onclick="ccOpenLog('+c.id+')">&#128221; Add note</button>'
+    +'<button class="btn-sm" onclick="wfOpenHandoff('+c.id+')">&#129309; Hand off</button>'
     +(missList.length?'<button class="btn-sm" onclick="ccOpenRequest('+c.id+')">&#9993; Request missing items</button>':'')
-    +'<button class="btn-sm" onclick="ccOpenDoc('+c.id+')">&#128196; Record document</button>'
+    +(c.irs==='Accepted'&&!c.finalBy?'<button class="btn-sm" onclick="ccOpenFinal('+c.id+')">&#128172; Final numbers given to client</button>':'')
     +'<button class="btn-sm" onclick="ccOpenEdit('+c.id+')">&#9998; Edit</button>'
-    +(c.irs==='Submitted'?'<button class="btn-sm" onclick="ccRollForward('+c.id+')">&#10133; Start '+(Number(c.taxYear)+1)+' record</button>':'')
-    +(ccCan('archive')?(c.archived?'<button class="btn-sm" onclick="wfArchiveClient('+c.id+',false)">Restore</button>':'<button class="btn-sm" onclick="wfArchiveClient('+c.id+',true)">Archive</button>'):'')
+    +(c.irs==='Accepted'?'<button class="btn-sm" onclick="ccRollForward('+c.id+')">&#10133; Start '+(Number(c.taxYear)+1)+' record</button>':'')
     +'</div>';
   var alertHtml=alerts.length?'<div style="margin-bottom:12px">'+alerts.map(function(a){return'<div class="cc-alert '+a.sev+'" style="cursor:default"><i class="cc-dot '+a.sev+'"></i><div><strong>'+esc(a.type)+'</strong> — '+esc(a.text)+'</div></div>';}).join('')+'</div>':'';
-  var cl='<div class="cc-box"><div class="cc-box-h"><div class="cc-box-t">Missing-documents checklist</div><div class="wf-muted"><i class="cc-dot red"></i> blocking · <i class="cc-dot yellow"></i> follow up · <i class="cc-dot green"></i> received</div></div>'
+  var cl='<div class="cc-box"><div class="cc-box-h"><div class="cc-box-t">Checklist</div><div class="wf-muted"><i class="cc-dot red"></i> missing · <i class="cc-dot yellow"></i> asked, follow up · <i class="cc-dot green"></i> received</div></div>'
     +(c.checklist||[]).map(function(it,i){var col=ccItemColor(it);var sub=it.status==='Received'?'Received '+wfDate(it.receivedAt)+(it.receivedBy?' · '+it.receivedBy:''):it.status==='Requested'?'Last asked '+wfDate(it.requestedAt)+' by '+(it.requestedBy||'—')+' · asked '+(it.requests||1)+'×':it.status==='N/A'?'Not applicable':'Never requested';return'<div class="cc-item"><i class="cc-dot '+col+'"></i><div><div class="lbl2">'+esc(it.l)+(it.req?'':' <span class="wf-muted">(optional)</span>')+(it.ph==='file'?' <span class="wf-muted">· needed to file</span>':'')+'</div><div class="wf-muted">'+esc(sub)+'</div></div><select onchange="ccSetItem('+c.id+','+i+',this.value)">'+wfOpts(['Missing','Requested','Received','N/A'],it.status)+'</select></div>';}).join('')
     +'<div style="margin-top:8px"><button class="btn-sm" onclick="ccAddItem('+c.id+')">+ Add item</button></div></div>';
-  var docs=(c.docs||[]).slice().sort(function(a,b){return (b.uploadedAt||0)-(a.uploadedAt||0);});
-  var dh='<div class="cc-box"><div class="cc-box-h"><div class="cc-box-t">Documents &amp; TaxDome folder</div><button class="btn-sm" onclick="ccOpenDoc('+c.id+')">+ Record document</button></div>'
-    +'<div class="cc-kv" style="margin-bottom:8px"><div class="k">TaxDome folder</div><div class="v">'+(c.folderUrl?'<a href="'+esc(c.folderUrl)+'" target="_blank" rel="noopener">Open in TaxDome &#8599;</a>':'<span class="wf-muted">Not linked — add it in Edit</span>')+'</div></div>'
-    +(docs.length?docs.map(function(d){return'<div class="cc-doc'+(d.flag?' flag':'')+'"><div style="display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap"><code>'+esc(d.name)+'</code><span class="wf-actions">'+(d.reviewed?'<span class="cc-pill cc-pill-green">&#10003; Reviewed</span>':'<button class="ic-btn" title="Mark reviewed" onclick="ccDocAction('+c.id+','+d.id+',\'review\')">&#10003;</button>')+(d.flag?'<button class="ic-btn" title="Clear flag" onclick="ccDocAction('+c.id+','+d.id+',\'unflag\')">&#9873; Clear</button>':'<button class="ic-btn" title="Flag as misfiled" onclick="ccDocAction('+c.id+','+d.id+',\'flag\')">&#9873;</button>')+'</span></div><div class="wf-muted">'+esc(d.category)+' · TY '+esc(d.taxYear)+' · '+esc(d.source||'')+' · recorded by '+esc(d.uploadedBy)+' '+wfWhen(d.uploadedAt)+(d.reviewed?' · reviewed by '+esc(d.reviewedBy):'')+'</div>'+(d.flag?'<div style="color:var(--red);font-weight:700;font-size:10px;margin-top:2px">&#9873; '+esc(d.flag)+'</div>':'')+'</div>';}).join(''):'<div class="empty">No documents recorded yet.</div>')+'</div>';
   var f=c.fin||ccBlankFin();
   var fh=fin?'<div class="cc-box"><div class="cc-box-h"><div class="cc-box-t">Financial</div>'+(ccCan('editFinance')?'<button class="btn-sm" onclick="ccOpenFinance('+c.id+')">&#9998; Update</button>':'')+'</div><div class="cc-kv"><div class="k">Service fee</div><div class="v">'+(f.fee!==''&&f.fee!=null?ccMoney(f.fee):'—')+'</div><div class="k">Invoice status</div><div class="v">'+esc(f.invoiceStatus||'Not Invoiced')+'</div><div class="k">Amount paid</div><div class="v">'+ccMoney(f.paid)+'</div><div class="k">Outstanding</div><div class="v" style="font-weight:800;color:'+(bal>0?'var(--red)':'var(--green)')+'">'+ccMoney(bal)+'</div><div class="k">Payment arrangement</div><div class="v">'+esc(f.arrangement||'—')+'</div><div class="k">Sending</div><div class="v">'+(f.holdForPayment?(bal>0?'<strong style="color:var(--red)">On hold for payment</strong>':'Hold set — paid, ok to send'):'Not held')+'</div></div></div>':'';
   var acts=w.activities.filter(function(a){return Number(a.clientRecordId)===Number(c.id);}).sort(function(a,b){return (b.ts||0)-(a.ts||0);});
-  var pinned=acts.filter(function(a){return a.pinned;}),rest=acts.filter(function(a){return!a.pinned;});
-  function li(a){return'<div class="cc-log'+(a.pinned?' pinned':'')+'"><div class="cc-log-h"><span><strong>'+esc(a.type||a.method)+'</strong> · '+esc(a.staff)+'</span><span>'+wfWhen(a.ts)+' <button class="cc-pin'+(a.pinned?' on':'')+'" title="'+(a.pinned?'Unpin':'Pin')+'" onclick="ccTogglePin('+c.id+','+a.id+')">&#128204;</button></span></div><div style="color:var(--navy);margin-top:2px">'+esc(a.summary)+'</div>'+(a.nextAction?'<div class="wf-muted">Next: '+esc(a.nextAction)+(a.followUpDate?' by '+wfDate(a.followUpDate):'')+'</div>':'')+'</div>';}
-  var th='<div class="cc-box"><div class="cc-box-h"><div class="cc-box-t">Activity &amp; notes</div><button class="btn-sm" onclick="ccOpenLog('+c.id+',\'Internal Note\')">+ Note</button></div>'+pinned.map(li).join('')+(rest.length?rest.slice(0,80).map(li).join(''):(pinned.length?'':'<div class="empty">No activity yet.</div>'))+'</div>';
+  var rems=acts.filter(function(a){return a.pinned;}).sort(function(a,b){return (a.followUpDate||'9999').localeCompare(b.followUpDate||'9999');});
+  var rh='<div class="cc-box cc-rem-box"><div class="cc-box-h"><div class="cc-box-t">&#128204; Reminders</div><span class="wf-muted">Pinned follow-ups stay here until marked done</span></div>'+(rems.length?rems.map(function(a){return ccNoteHtml(c,a,true);}).join(''):'<div class="empty" style="padding:8px 0">No open reminders. Pin a note to keep a follow-up here.</div>')+'</div>';
+  var th='<div class="cc-box"><div class="cc-box-h"><div class="cc-box-t">History</div><div class="wf-actions"><label class="wf-muted" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="cch-notes" '+(ccNotesOnly?'checked':'')+' onchange="ccNotesOnly=this.checked;ccOpenProfile('+c.id+',true)"> Notes only</label><button class="btn-sm" onclick="ccOpenLog('+c.id+')">+ Add note</button></div></div>'
+    +(function(){var list=acts.filter(function(a){return!ccNotesOnly||a.done||CC_CONTACT_TYPES.indexOf(a.type)>-1||a.type==='Internal Note'||a.type==='Handoff';});return list.length?list.slice(0,150).map(function(a){return ccNoteHtml(c,a,false);}).join(''):'<div class="empty">No history yet.</div>';})()+'</div>';
   var other=w.clients.filter(function(x){return x.id!==c.id&&x.clientId&&x.clientId===c.clientId;}).sort(function(a,b){return Number(b.taxYear)-Number(a.taxYear);});
   var oh=other.length?'<div class="meta" style="margin:-6px 0 10px">Other years: '+other.map(function(x){return'<a href="#" onclick="ccOpenProfile('+x.id+');return false">'+esc(x.taxYear)+' '+esc(x.service)+'</a>';}).join(' · ')+'</div>':'';
-  var body='<div class="cc-p-head"><div><div class="cc-p-name">'+esc(c.name)+'</div><div class="cc-tags">'+tags+'</div></div><button class="btn-sm" onclick="closeModal()">&#10005; Close</button></div>'+oh+glance+bar+alertHtml
-    +'<div class="cc-p-grid"><div>'+cl+dh+'</div><div>'+fh+th+'</div></div>'
-    +(c.notes?'<div class="cc-box"><div class="cc-box-t" style="margin-bottom:4px">Notes</div><div style="font-size:11px;white-space:pre-wrap">'+esc(c.notes)+'</div></div>':'');
+  var td=c.folderUrl?'<a class="btn-pri" style="text-decoration:none;display:inline-flex;align-items:center;gap:5px" href="'+esc(c.folderUrl)+'" target="_blank" rel="noopener">Open in TaxDome &#8599;</a>':'<button class="btn-sm" onclick="ccOpenEdit('+c.id+')">+ Add TaxDome link</button>';
+  var body='<div class="cc-p-head"><div><div class="cc-p-name">'+esc(c.name)+'</div><div class="cc-tags">'+tags+'</div></div><div class="wf-actions">'+td+'<button class="btn-sm" onclick="closeModal()">&#10005; Close</button></div></div>'+oh+glance+trailHtml+bar+alertHtml
+    +'<div class="cc-p-grid"><div>'+rh+th+'</div><div>'+cl+fh+'</div></div>'
+    +(c.notes?'<div class="cc-box"><div class="cc-box-t" style="margin-bottom:4px">Client notes</div><div style="font-size:11px;white-space:pre-wrap">'+esc(c.notes)+'</div></div>':'');
   openModal({title:'',wide:true,body:body,btns:'<button class="btn-sm" onclick="closeModal()">Close</button>'});
   var mb=document.getElementById('modalBox');if(mb)mb.dataset.cc=String(c.id);
 }
+var ccNotesOnly=false;
+/* One note / history entry. Structured notes show the five questions the team agreed on. */
+function ccNoteHtml(c,a,asReminder){
+  var dd=ccDateDiff(a.followUpDate),due=a.followUpDate?'<span class="cc-due '+(dd<0?'over':dd===0?'today':'ok')+'">'+(dd<0?'Overdue — ':dd===0?'Today — ':'')+wfDate(a.followUpDate)+'</span>':'';
+  var isNote=!!(a.done||a.result||a.needed);
+  var head='<div class="cc-note-h"><span class="cc-note-type t-'+ccNorm(a.type||a.method)+'">'+esc(a.type||a.method||'Note')+'</span><strong>'+esc(a.staff)+'</strong><span class="wf-muted">'+wfWhen(a.ts)+'</span></div>';
+  var bodyHtml=isNote?'<div class="cc-note-grid">'
+      +(a.done?'<div class="k">Done</div><div class="v">'+esc(a.done)+'</div>':'')
+      +(a.result?'<div class="k">Happened</div><div class="v">'+esc(a.result)+'</div>':'')
+      +(a.needed?'<div class="k">Still needed</div><div class="v"><strong>'+esc(a.needed)+'</strong></div>':'')
+      +(a.owner||a.followUpDate?'<div class="k">Responsible</div><div class="v">'+esc(a.owner||'—')+(due?' · follow up '+due:'')+'</div>':'')
+      +'</div>'
+    :'<div class="cc-note-plain">'+esc(a.summary)+(a.nextAction?'<div class="wf-muted">Next: '+esc(a.nextAction)+(a.followUpDate?' by '+wfDate(a.followUpDate):'')+'</div>':'')+'</div>';
+  var acts='';
+  if(asReminder)acts='<div class="cc-note-acts"><button class="btn-sm" onclick="ccDoneReminder('+c.id+','+a.id+')">&#10003; Done</button><button class="btn-sm" onclick="ccOpenLog('+c.id+',\'Call\','+a.id+')">&#128221; Add follow-up note</button></div>';
+  else if(isNote||a.type==='Internal Note'||CC_CONTACT_TYPES.indexOf(a.type)>-1)acts='<div class="cc-note-acts">'+(a.pinned?'<span class="wf-muted">&#128204; Pinned as a reminder</span>':(a.completedAt?'<span class="wf-muted">&#10003; Reminder done by '+esc(a.completedBy||'')+' '+wfWhen(a.completedAt)+'</span> ':'')+'<button class="btn-sm cc-pin-btn" onclick="ccPinNote('+c.id+','+a.id+',true)">&#128204; Pin as reminder</button>')+'</div>';
+  return'<div class="cc-note'+(asReminder?' reminder':'')+(isNote?'':' sys')+'">'+head+bodyHtml+acts+'</div>';
+}
+function ccReminders(c){return wfEnsure().activities.filter(function(a){return a.pinned&&Number(a.clientRecordId)===Number(c.id);});}
 function ccSetItem(id,i,val){var c=ccFind(id);if(!c||!c.checklist[i])return;var it=c.checklist[i],old=it.status;if(old===val)return;it.status=val;var t=wfToday();
   if(val==='Received'){it.receivedAt=t;it.receivedBy=wfActor();ccLog(c,'Document Received',it.l+' marked received.');}
   else if(val==='Requested'){it.requestedAt=t;it.requestedBy=wfActor();it.requests=(it.requests||0)+1;ccLog(c,'Missing-Info Request',it.l+' requested from client.');}
@@ -2303,25 +2387,42 @@ function ccSetItem(id,i,val){var c=ccFind(id);if(!c||!c.checklist[i])return;var 
 function ccDocsDone(c){if(c.prep==='Missing Documents'&&!ccOutstanding(c,'prep').length){c.prep='Needs Work';c.prepAt=Date.now();c.prepBy=wfActor()+' (auto)';ccLog(c,'Status Change','All required documents received — Preparation: Missing Documents → Needs Work.');wfAudit('Preparation Missing Documents → Needs Work (all documents received)',c,'status');toast('All documents are in. Preparation set to Needs Work.');}}
 function ccAddItem(id){var c=ccFind(id);if(!c)return;openModal({title:'Add Checklist Item',body:'<label class="lbl">Item</label><input class="field" id="cci-l" placeholder="e.g. Form 1098 mortgage interest"><label class="lbl">Needed</label><select class="field" id="cci-ph"><option value="prep">Before preparation</option><option value="file">Before filing</option></select><label style="display:flex;gap:6px;align-items:center;font-size:11px;margin-top:8px"><input type="checkbox" id="cci-req" checked> Required</label>',btns:'<button class="btn-sm" onclick="ccOpenProfile('+id+',true)">Cancel</button><button class="btn-pri" onclick="ccSaveItem('+id+')">Add</button>'});}
 function ccSaveItem(id){var c=ccFind(id),l=tv('cci-l').trim();if(!c)return;if(!l){toast('Name the item.');return;}c.checklist=c.checklist||[];c.checklist.push({k:'x'+Date.now(),l:l,ph:tv('cci-ph'),req:wfChecked('cci-req'),status:'Missing',requestedAt:'',requestedBy:'',requests:0,receivedAt:'',receivedBy:'',note:''});ccTouch(c);wfAudit('Added checklist item: '+l,c);fbSave();ccOpenProfile(id,true);renderWorkflow();}
-function ccTogglePin(cid,aid){var w=wfEnsure(),a=w.activities.find(function(x){return Number(x.id)===Number(aid);});if(!a)return;a.pinned=!a.pinned;fbSave();ccAfterChange(cid);}
+function ccPinNote(cid,aid,on){var w=wfEnsure(),a=w.activities.find(function(x){return Number(x.id)===Number(aid);});if(!a)return;a.pinned=!!on;if(on){a.completedAt=0;a.completedBy='';}var c=ccFind(cid);if(c){ccTouch(c);wfAudit((on?'Pinned':'Unpinned')+' reminder',c);}fbSave();toast(on?'Pinned as a reminder.':'Reminder removed.');ccAfterChange(cid);}
+function ccDoneReminder(cid,aid){var w=wfEnsure(),a=w.activities.find(function(x){return Number(x.id)===Number(aid);}),c=ccFind(cid);if(!a||!c)return;a.pinned=false;a.completedAt=Date.now();a.completedBy=wfActor();ccLog(c,'Internal Note','Reminder done: '+(a.needed||a.summary||'follow-up')+'.');if(c.nextAction&&(c.nextAction===a.needed)){var next=ccReminders(c).sort(function(x,y){return (x.followUpDate||'9999').localeCompare(y.followUpDate||'9999');})[0];c.nextAction=next?(next.needed||next.summary):'';c.nextActionOwner=next?(next.owner||''):'';c.nextActionDue=next?(next.followUpDate||''):'';}ccTouch(c);wfAudit('Completed reminder',c);fbSave();toast('Reminder marked done.');ccAfterChange(cid);}
+function ccEditCode(id){var c=ccFind(id);if(!c)return;var code=prompt('IRS rejection code:',c.rejectionCode||'');if(code===null)return;c.rejectionCode=code.trim();ccLog(c,'Internal Note','Rejection code recorded: '+(c.rejectionCode||'(cleared)')+'.');ccTouch(c);wfAudit('Rejection code '+(c.rejectionCode||'cleared'),c,'status');fbSave();ccAfterChange(id);}
+function ccOpenFinal(id){var c=ccFind(id);if(!c)return;openModal({title:'Final Numbers Given — '+esc(c.name),body:'<div class="form-grid"><div><label class="lbl">Date</label><input class="field" type="date" id="ccfn-d" value="'+wfToday()+'"></div><div><label class="lbl">How</label><select class="field" id="ccfn-h">'+wfOpts(['Call','In Person','Text Message','Email','TaxDome Message'],'Call')+'</select></div><div class="span-2"><label class="lbl">What the client was told (refund / balance due)</label><textarea class="field" id="ccfn-n" rows="3"></textarea></div></div><div class="meta" style="margin-top:6px">Recorded as given by <strong>'+esc(wfActor())+'</strong>.</div>',btns:'<button class="btn-sm" onclick="ccOpenProfile('+id+',true)">Cancel</button><button class="btn-pri" onclick="ccSaveFinal('+id+')">Save</button>'});}
+function ccSaveFinal(id){var c=ccFind(id);if(!c)return;var n=tv('ccfn-n').trim();if(!n){toast('Describe what the client was told.');return;}c.finalBy=wfActor();c.finalDate=tv('ccfn-d')||wfToday();c.finalHow=tv('ccfn-h');ccLog(c,c.finalHow,'Final numbers given to the client.',{done:'Gave the client their final numbers',result:n});c.lastContactDate=c.finalDate;c.lastContactBy=wfActor();if(/final numbers/i.test(c.nextAction||'')){c.nextAction='';c.nextActionDue='';c.nextActionOwner='';}ccTouch(c);wfAudit('Final numbers given to client',c,'status');fbSave();toast('Recorded.');ccOpenProfile(id,true);renderWorkflow();}
 function ccOpenNext(id){var c=ccFind(id);if(!c)return;openModal({title:'Next Action — '+esc(c.name),body:'<div class="form-grid"><div class="span-2"><label class="lbl">What must happen next</label><input class="field" id="ccn-a" value="'+esc(c.nextAction||'')+'"></div><div><label class="lbl">Who is responsible</label><select class="field" id="ccn-o"><option value="">Unassigned</option>'+wfOpts(wfStaffNames(),c.nextActionOwner||wfActor())+'</select></div><div><label class="lbl">Due</label><input class="field" type="date" id="ccn-d" value="'+esc(c.nextActionDue||wfAddDays(wfToday(),1))+'"></div></div>',btns:'<button class="btn-sm" onclick="ccOpenProfile('+id+',true)">Cancel</button><button class="btn-sm" onclick="ccSaveNext('+id+',true)">Clear</button><button class="btn-pri" onclick="ccSaveNext('+id+')">Save</button>'});}
 function ccSaveNext(id,clear){var c=ccFind(id);if(!c)return;if(clear){c.nextAction='';c.nextActionOwner='';c.nextActionDue='';ccLog(c,'Internal Note','Next action cleared.');}else{var a=tv('ccn-a').trim();if(!a){toast('Describe the next action.');return;}var prev=c.nextActionOwner;c.nextAction=a;c.nextActionOwner=tv('ccn-o');c.nextActionDue=tv('ccn-d');ccLog(c,'Internal Note','Next action: '+a+' — '+(c.nextActionOwner||'unassigned')+(c.nextActionDue?' by '+wfDate(c.nextActionDue):'')+'.',{nextAction:a,followUpDate:c.nextActionDue});if(c.nextActionOwner&&c.nextActionOwner!==prev&&c.nextActionOwner!==wfActor())addInbox(c.nextActionOwner,'Next action on '+c.name+': '+a+(c.nextActionDue?' (due '+wfDate(c.nextActionDue)+')':'')+'.');}ccTouch(c);wfAudit(clear?'Cleared next action':'Set next action',c);fbSave();renderInbox();ccOpenProfile(id,true);renderWorkflow();}
 
 /* ── LOG CONTACT / NOTE ── */
-function ccOpenLog(clientId,type){
-  var w=wfEnsure(),active=w.clients.filter(ccIsActive).sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
-  var c=(clientId&&ccFind(clientId))||active[0];if(!c){toast('Add a client first.');return;}if(active.indexOf(c)<0)active.unshift(c);
-  openModal({title:'Log Contact or Note',body:'<div class="form-grid"><div class="span-2"><label class="lbl">Client</label><select class="field" id="wfa-client">'+active.map(function(x){return'<option value="'+x.id+'" '+(x.id===c.id?'selected':'')+'>'+esc(x.name)+' · '+esc(x.taxYear)+' '+esc(x.service)+'</option>';}).join('')+'</select></div><div><label class="lbl">Type</label><select class="field" id="wfa-type">'+wfOpts(CC_LOG_TYPES.filter(function(t){return t!=='Status Change';}),type||'Call')+'</select></div><div><label class="lbl">Date</label><input class="field" id="wfa-date" type="date" value="'+wfToday()+'"></div><div class="span-2"><label class="lbl">What happened / what was said</label><textarea class="field" id="wfa-summary" rows="3"></textarea></div><div class="span-2"><label class="lbl">Next action (optional)</label><input class="field" id="wfa-nextAction" value="'+esc(c.nextAction||'')+'"></div><div><label class="lbl">Responsible</label><select class="field" id="wfa-owner"><option value="">Unassigned</option>'+wfOpts(wfStaffNames(),c.nextActionOwner||wfActor())+'</select></div><div><label class="lbl">Due</label><input class="field" id="wfa-followUpDate" type="date" value="'+esc(c.nextActionDue||'')+'"></div><div class="span-2"><label style="display:flex;gap:6px;align-items:center;font-size:11px"><input type="checkbox" id="wfa-pin"> &#128204; Pin this note to the top of the client’s record</label></div></div>',
-    btns:'<button class="btn-sm" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="wfSaveContact()">Save</button>'});
+function ccOpenLog(clientId,type,fromId){
+  var w=wfEnsure(),all=w.clients.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
+  var c=(clientId&&ccFind(clientId))||all.filter(ccIsActive)[0]||all[0];if(!c){toast('Add a client first.');return;}
+  var prev=fromId?w.activities.find(function(a){return Number(a.id)===Number(fromId);}):null;
+  openModal({title:'Add Note',body:'<div class="form-grid"><div class="span-2"><label class="lbl">Client</label><select class="field" id="wfa-client">'+all.map(function(x){return'<option value="'+x.id+'" '+(x.id===c.id?'selected':'')+'>'+esc(x.name)+' · '+esc(x.taxYear)+' '+esc(x.service)+'</option>';}).join('')+'</select></div>'
+    +'<div><label class="lbl">Type</label><select class="field" id="wfa-type">'+wfOpts(CC_LOG_TYPES.filter(function(t){return ['Status Change','Missing-Info Request','Document Received'].indexOf(t)<0;}),type||'Call')+'</select></div><div><label class="lbl">Date</label><input class="field" id="wfa-date" type="date" value="'+wfToday()+'"></div>'
+    +'<div class="span-2"><label class="lbl">1 · What was done? *</label><textarea class="field" id="wfa-done" rows="2" placeholder="e.g. Called the client about her missing W-2"></textarea></div>'
+    +'<div class="span-2"><label class="lbl">2 · What happened?</label><textarea class="field" id="wfa-result" rows="2" placeholder="e.g. She will upload it to TaxDome tonight"></textarea></div>'
+    +'<div class="span-2"><label class="lbl">3 · What is still needed?</label><input class="field" id="wfa-needed" value="'+esc(prev?(prev.needed||''):'')+'" placeholder="e.g. W-2 from Walmart"></div>'
+    +'<div><label class="lbl">4 · Who is responsible?</label><select class="field" id="wfa-owner"><option value="">—</option>'+wfOpts(wfStaffNames(),prev&&prev.owner||wfActor())+'</select></div>'
+    +'<div><label class="lbl">5 · Next follow-up date</label><input class="field" id="wfa-followUpDate" type="date" value="" onchange="var p=document.getElementById(\'wfa-pin\');if(p&&this.value)p.checked=true"></div>'
+    +'<div class="span-2"><label class="cc-pin-toggle"><input type="checkbox" id="wfa-pin"> &#128204; Pin as a reminder (stays at the top of this client until marked done)</label></div>'
+    +(prev?'<div class="span-2 wf-muted">This note follows up on the reminder from '+wfWhen(prev.ts)+'. Saving it marks that reminder done.</div><input type="hidden" id="wfa-prev" value="'+prev.id+'">':'')
+    +'</div>',
+    btns:'<button class="btn-sm" onclick="'+(clientId?'ccOpenProfile('+c.id+',true)':'closeModal()')+'">Cancel</button><button class="btn-pri" onclick="wfSaveContact()">Save Note</button>'});
 }
 function wfSaveContact(){
-  var c=ccFind(tv('wfa-client')),sum=tv('wfa-summary').trim(),type=tv('wfa-type');if(!c){toast('Select a client.');return;}if(!sum){toast('Describe what happened.');return;}
-  var a=ccLog(c,type,sum,{date:tv('wfa-date')||wfToday(),nextAction:tv('wfa-nextAction').trim(),followUpDate:tv('wfa-followUpDate'),pinned:wfChecked('wfa-pin')});
+  var c=ccFind(tv('wfa-client')),done=tv('wfa-done').trim(),type=tv('wfa-type');if(!c){toast('Select a client.');return;}if(!done){toast('Describe what was done.');return;}
+  var needed=tv('wfa-needed').trim(),owner=tv('wfa-owner'),fu=tv('wfa-followUpDate'),pin=wfChecked('wfa-pin');
+  if(pin&&!fu){toast('Add a follow-up date for the reminder.');return;}
+  var a=ccLog(c,type,done,{date:tv('wfa-date')||wfToday(),done:done,result:tv('wfa-result').trim(),needed:needed,owner:owner,nextAction:needed,followUpDate:fu,pinned:pin});
+  var prevId=tv('wfa-prev');if(prevId){var p=wfEnsure().activities.find(function(x){return Number(x.id)===Number(prevId);});if(p){p.pinned=false;p.completedAt=Date.now();p.completedBy=wfActor();}}
   if(CC_CONTACT_TYPES.indexOf(type)>-1){c.lastContactDate=a.date;c.lastContactBy=wfActor();}
-  if(a.nextAction){c.nextAction=a.nextAction;c.nextActionOwner=tv('wfa-owner');c.nextActionDue=a.followUpDate;}
-  ccTouch(c);wfAudit('Logged '+type.toLowerCase(),c);addLog('Client '+type.toLowerCase()+': '+c.name,c.office,wfActor());fbSave();toast('Saved to '+c.name+'’s record.');closeModal();ccOpenProfile(c.id,true);renderWorkflow();
+  if(needed||fu){c.nextAction=needed||'Follow up';c.nextActionOwner=owner;c.nextActionDue=fu;}
+  if(owner&&owner!==wfActor()&&(needed||fu))addInbox(owner,c.name+': '+(needed||'follow up')+(fu?' (by '+wfDate(fu)+')':'')+' — note from '+wfActor()+'.');
+  ccTouch(c);wfAudit('Added '+type.toLowerCase()+' note',c);addLog('Client note: '+c.name,c.office,wfActor());fbSave();renderInbox();toast('Note saved to '+c.name+'.');ccOpenProfile(c.id,true);renderWorkflow();
 }
-
 /* ── REQUEST MISSING ITEMS ── */
 function ccFirstName(c){var n=String(c.name||'').trim();if(c.service==='Business Return'||/\b(llc|inc|corp|co)\.?$/i.test(n))return n;if(n.indexOf(',')>-1)n=n.split(',')[1].trim();return n.split(' ')[0]||n;}
 function ccOpenRequest(id){
@@ -2345,31 +2446,6 @@ function ccSendRequest(id){
   toast('Request recorded on '+idx.length+' item'+(idx.length>1?'s':'')+'.');ccOpenProfile(id,true);renderWorkflow();
 }
 
-/* ── DOCUMENTS ── */
-function ccOpenDoc(id){
-  var c=ccFind(id);if(!c)return;var items=(c.checklist||[]).map(function(it,i){return'<option value="'+i+'">'+esc(it.l)+' ('+esc(it.status)+')</option>';}).join('');
-  openModal({title:'Record Document — '+esc(c.name),body:'<div class="meta" style="margin:-6px 0 10px">Scan or upload the file into the client’s <strong>TaxDome folder</strong>, then record it here. The standard file name is built for you.</div><div class="form-grid"><div><label class="lbl">Category (folder)</label><select class="field" id="ccd-cat" onchange="ccDocName('+c.id+')">'+CC_DOC_CATS.map(function(x){return'<option value="'+x[0]+'">'+x[0]+' '+esc(x[1])+'</option>';}).join('')+'</select></div><div><label class="lbl">Tax year</label><input class="field" id="ccd-year" value="'+esc(c.taxYear)+'" oninput="ccDocName('+c.id+')"></div><div class="span-2"><label class="lbl">Short description</label><input class="field" id="ccd-desc" placeholder="e.g. W2 Acme Corp" oninput="ccDocName('+c.id+')"></div><div class="span-2"><label class="lbl">Standard file name (use this in TaxDome)</label><input class="field" id="ccd-name" readonly></div><div><label class="lbl">Received via</label><select class="field" id="ccd-src">'+wfOpts(['Scanned at reception','Client portal upload','Email','Mail','Staff upload'],'Scanned at reception')+'</select></div><div><label class="lbl">Satisfies checklist item</label><select class="field" id="ccd-item"><option value="">— none —</option>'+items+'</select></div></div><div id="ccd-warn"></div>',
-    btns:'<button class="btn-sm" onclick="ccOpenProfile('+c.id+',true)">Cancel</button><button class="btn-pri" onclick="ccSaveDoc('+c.id+')">Record Document</button>'});
-  ccDocName(c.id);
-}
-function ccDocName(id){var c=ccFind(id);if(!c)return;var cat=tv('ccd-cat'),yr=tv('ccd-year').trim(),desc=tv('ccd-desc').trim().replace(/[^A-Za-z0-9 ]/g,'').replace(/\s+/g,'-')||'Description',catName=(CC_DOC_CATS.find(function(x){return x[0]===cat;})||['',''])[1].replace(/[^A-Za-z]/g,'');var n=document.getElementById('ccd-name');if(n)n.value=yr+'_'+(c.clientId||'OGO')+'_'+cat+catName+'_'+desc+'.pdf';var wn=document.getElementById('ccd-warn');if(wn)wn.innerHTML=yr&&yr!==String(c.taxYear)?'<div class="cc-issues warn">&#9873; This record is tax year <strong>'+esc(c.taxYear)+'</strong> but the document says <strong>'+esc(yr)+'</strong>. It will be flagged for review.</div>':'';}
-function ccSaveDoc(id){
-  var c=ccFind(id);if(!c)return;var desc=tv('ccd-desc').trim();if(!desc){toast('Add a short description.');return;}var yr=tv('ccd-year').trim();if(!/^\d{4}$/.test(yr)){toast('Tax year must be 4 digits.');return;}
-  var name=tv('ccd-name'),w=wfEnsure();c.docs=c.docs||[];
-  if(c.docs.some(function(d){return d.name===name;})){toast('A document with this name is already recorded. Change the description.');return;}
-  var d={id:w.nextId++,name:name,category:(CC_DOC_CATS.find(function(x){return x[0]===tv('ccd-cat');})||['',''])[1],taxYear:yr,source:tv('ccd-src'),uploadedBy:wfActor(),uploadedAt:Date.now(),reviewed:false,reviewedBy:'',reviewedAt:0,flag:yr!==String(c.taxYear)?'Tax year '+yr+' does not match this '+c.taxYear+' record':''};
-  c.docs.push(d);var it=tv('ccd-item');
-  if(it!==''&&c.checklist[Number(it)]){var ci=c.checklist[Number(it)];ci.status='Received';ci.receivedAt=wfToday();ci.receivedBy=wfActor();}
-  ccLog(c,'Document Received',name+' ('+d.source+')'+(d.flag?' — flagged: '+d.flag:''));wfAudit('Recorded document '+name,c);ccDocsDone(c);ccTouch(c);fbSave();toast('Document recorded.');ccOpenProfile(id,true);renderWorkflow();
-}
-function ccDocAction(cid,did,act){
-  var c=ccFind(cid);if(!c)return;var d=(c.docs||[]).find(function(x){return Number(x.id)===Number(did);});if(!d)return;
-  if(act==='review'){d.reviewed=true;d.reviewedBy=wfActor();d.reviewedAt=Date.now();ccLog(c,'Internal Note','Reviewed document '+d.name+'.');wfAudit('Reviewed document '+d.name,c);}
-  else if(act==='flag'){var why=prompt('Why is this document misfiled? (e.g. wrong client, wrong tax year, duplicate)');if(!why)return;d.flag=why;ccLog(c,'Internal Note','Flagged document '+d.name+': '+why,{pinned:true});wfAudit('Flagged document '+d.name+': '+why,c);}
-  else if(act==='unflag'){d.flag='';ccLog(c,'Internal Note','Cleared flag on '+d.name+'.');wfAudit('Cleared document flag '+d.name,c);}
-  ccTouch(c);fbSave();ccAfterChange(cid);
-}
-
 /* ── FINANCE ── */
 function ccOpenFinance(id){var c=ccFind(id);if(!c||!ccCan('editFinance'))return;var f=c.fin||ccBlankFin();openModal({title:'Financial — '+esc(c.name),body:'<div class="form-grid"><div><label class="lbl">Service fee</label><input class="field" id="ccf-fee" type="number" min="0" step="0.01" value="'+esc(f.fee)+'"></div><div><label class="lbl">Amount paid</label><input class="field" id="ccf-paid" type="number" min="0" step="0.01" value="'+esc(f.paid)+'"></div><div><label class="lbl">Invoice status</label><select class="field" id="ccf-inv">'+wfOpts(CC_INVOICE,f.invoiceStatus)+'</select></div><div><label class="lbl">Payment arrangement</label><input class="field" id="ccf-arr" value="'+esc(f.arrangement)+'" placeholder="e.g. deduct from refund"></div><div class="span-2 wf-checks" style="grid-template-columns:1fr"><label><input type="checkbox" id="ccf-hold" '+(f.holdForPayment?'checked':'')+'> Hold sending to the IRS until paid</label></div></div>',btns:'<button class="btn-sm" onclick="ccOpenProfile('+id+',true)">Cancel</button><button class="btn-pri" onclick="ccSaveFinance('+id+')">Save</button>'});}
 function ccSaveFinance(id){var c=ccFind(id);if(!c||!ccCan('editFinance'))return;var fee=tv('ccf-fee'),paid=tv('ccf-paid');if((fee!==''&&Number(fee)<0)||(paid!==''&&Number(paid)<0)){toast('Amounts cannot be negative.');return;}var old=c.fin||ccBlankFin();c.fin={fee:fee,paid:paid,invoiceStatus:tv('ccf-inv'),arrangement:tv('ccf-arr').trim(),holdForPayment:wfChecked('ccf-hold')};var bal=ccBalance(c),pay=(c.checklist||[]).find(function(i){return i.k==='pay';});if(pay&&Number(fee)>0&&bal<=0&&pay.status!=='Received'){pay.status='Received';pay.receivedAt=wfToday();pay.receivedBy=wfActor();}wfAudit('Financial: fee '+ccMoney(old.fee)+'→'+ccMoney(fee)+', paid '+ccMoney(old.paid)+'→'+ccMoney(paid)+', '+c.fin.invoiceStatus+(c.fin.holdForPayment?', hold for payment':''),c,'finance');ccLog(c,'Internal Note','Financial record updated. Balance '+ccMoney(bal)+'.');ccTouch(c);fbSave();ccOpenProfile(id,true);renderWorkflow();}
@@ -2386,9 +2462,9 @@ function ccOpenEdit(id,seed){
     +'<div><label class="lbl">Office *</label><select class="field" id="cce-office">'+wfOpts(ccOffices(),d.office)+'</select></div>'
     +'<div><label class="lbl">Client ID</label><input class="field" id="cce-clientId" value="'+esc(d.clientId)+'" placeholder="Auto: OGO-26001"></div>'
     +(c?'':'<div><label class="lbl">Preparation Status</label><select class="field" id="cce-prep"><option value="">'+CC_PREP_NONE+'</option>'+wfOpts(CC_PREP.map(function(s){return s.k;}),d.prep)+'</select></div>')
-    +'<div><label class="lbl">Preparer</label><select class="field" id="cce-preparer"><option value="">Not yet</option>'+wfOpts(staff,d.preparer)+'</select></div>'
+    +'<div><label class="lbl">Preparer (optional)</label><select class="field" id="cce-preparer"><option value="">Not yet</option>'+wfOpts(staff,d.preparer)+'</select></div>'
     +'<div class="span-2"><label class="lbl">Created by</label><input class="field" value="'+esc(c?(c.createdBy||'Not recorded')+' · '+wfWhen(c.createdAt):wfActor()+' (you)')+'" readonly></div>'
-    +'<div class="span-2"><label class="lbl">TaxDome folder link</label><input class="field" id="cce-folderUrl" type="url" value="'+esc(d.folderUrl||'')+'" placeholder="https://ogoservices.taxdome.com/...">'+err('folderUrl')+'</div>'
+    +'<div class="span-2"><label class="lbl">TaxDome client link</label><input class="field" id="cce-folderUrl" type="url" value="'+esc(d.folderUrl||'')+'" placeholder="https://ogoservices.taxdome.com/...">'+err('folderUrl')+'</div>'
     +'<div class="span-2"><label class="lbl">Notes</label><textarea class="field" id="cce-notes" rows="2">'+esc(d.notes||'')+'</textarea></div>'
     +'</div><div id="cce-dup"></div>'+(!c?'<div class="meta" style="margin-top:8px">The missing-documents checklist is created from the service you choose. IRS Status starts as “'+CC_IRS_NONE+'”.</div>':''),
     btns:(c?'<button class="btn-sm" onclick="ccOpenProfile('+c.id+',true)">Cancel</button>':'<button class="btn-sm" onclick="closeModal()">Cancel</button>')+'<button class="btn-pri" onclick="wfSaveClient()">'+(c?'Save Changes':'Create Client')+'</button>'});
@@ -2423,7 +2499,58 @@ function ccRollForward(id){
   var ex=w.clients.find(function(x){return x.clientId===c.clientId&&String(x.taxYear)===ny&&x.service===c.service;});if(ex){toast('A '+ny+' record already exists.');ccOpenProfile(ex.id);return;}
   ccOpenEdit(null,{clientId:c.clientId,name:c.name,service:c.service,office:c.office,preparer:c.preparer,folderUrl:c.folderUrl,taxYear:ny});
 }
-function wfArchiveClient(id,on){var c=ccFind(id);if(!c)return;if(!ccCan('archive')){toast('Only a Manager or Administrator can archive.');return;}if(on&&!confirm('Archive '+c.name+' ('+c.taxYear+')? It leaves the active list but stays on record.'))return;c.archived=!!on;ccLog(c,'Status Change',on?'Archived.':'Restored from archive.');ccTouch(c);wfAudit(on?'Archived client record':'Restored client record',c,'status');addLog((on?'Archived':'Restored')+' client: '+c.name,c.office,wfActor());fbSave();closeModal();renderWorkflow();toast(on?'Client archived.':'Client restored.');}
+/* ── HANDOFFS ── ownership moves only when the receiver accepts */
+function wfOpenHandoff(clientId){
+  var w=wfEnsure(),c=ccFind(clientId);if(!c){toast('Client not found.');return;}
+  var ex=ccPendingHandoff(c);if(ex){toast('A handoff to '+ex.to+' is already waiting for this client.');closeModal();wfSetTab('handoffs');return;}
+  var staff=wfStaffNames().filter(function(n){return n!==wfActor();});
+  openModal({title:'🤝 Hand Off — '+esc(c.name),body:'<div class="meta" style="margin:-6px 0 10px">'+esc(c.taxYear)+' '+esc(c.service)+' · now with <strong>'+esc(ccHandler(c)||'—')+'</strong> · Preparation: '+esc(c.prep||CC_PREP_NONE)+' · IRS: '+esc(c.irs||CC_IRS_NONE)+'</div><div class="form-grid">'
+    +'<div class="span-2"><label class="lbl">Hand off to *</label><select class="field" id="wfh-to"><option value="">Select the person receiving this return</option>'+wfOpts(staff,'')+'</select></div>'
+    +'<div class="span-2"><label class="lbl">Why is it being handed off? *</label><input class="field" id="wfh-why" placeholder="e.g. I am out Friday / needs a preparer / client is at your office"></div>'
+    +'<div class="span-2"><label class="lbl">What has already been completed? *</label><textarea class="field" id="wfh-done" rows="3" placeholder="e.g. All documents received and entered in TaxSlayer"></textarea></div>'
+    +'<div class="span-2"><label class="lbl">What does the receiving person still need to do? *</label><textarea class="field" id="wfh-need" rows="3" placeholder="e.g. Finish the Schedule C and send to the IRS"></textarea></div>'
+    +'<div class="span-2" style="font-size:11px;color:var(--mu);padding:9px 10px;background:#F7F9FA;border:1px solid var(--ln);border-radius:10px">They get a notification now. <strong style="color:var(--navy)">The return moves to them when they accept.</strong></div></div>',
+    btns:'<button class="btn-sm" onclick="ccOpenProfile('+c.id+',true)">Cancel</button><button class="btn-pri" onclick="wfSendHandoff('+c.id+')">Send Handoff</button>'});
+}
+function wfSendHandoff(clientId){
+  var w=wfEnsure(),c=ccFind(clientId),to=tv('wfh-to'),why=tv('wfh-why').trim(),done=tv('wfh-done').trim(),need=tv('wfh-need').trim();if(!c)return;
+  if(!to){toast('Choose who is receiving the return.');return;}if(!why||!done||!need){toast('Fill in why, what is done, and what is still needed.');return;}
+  var h={id:w.nextId++,clientRecordId:c.id,clientName:c.name,from:wfActor(),to:to,status:'Pending',why:why,done:done,need:need,note:why,responseNote:'',createdAt:Date.now(),respondedAt:null,respondedBy:''};
+  w.handoffs.unshift(h);w.handoffs=w.handoffs.slice(0,3000);
+  ccLog(c,'Handoff','Handoff sent to '+to+'.',{done:'Handed off to '+to+' — '+why,result:done,needed:need,owner:to});
+  ccTouch(c);wfAudit('Sent handoff to '+to,c,'handoff');addLog('Client handoff: '+c.name+' from '+h.from+' to '+to+'.',c.office,wfActor());
+  addInbox(to,'🤝 '+h.from+' is handing you '+c.name+'. Why: '+why+'. Still needed: '+need+'. Open Client Command Center → Handoffs to accept.');
+  fbSave();renderInbox();closeModal();wfSetTab('handoffs');toast('Handoff sent to '+to+'.');
+}
+function wfOpenHandoffResponse(id,status){
+  var w=wfEnsure(),h=w.handoffs.find(function(x){return Number(x.id)===Number(id);});if(!h||h.status!=='Pending'){toast('This handoff is no longer pending.');return;}if(h.to!==wfActor()){toast('Only '+h.to+' can accept or decline this handoff.');return;}
+  var ok=status==='Accepted';
+  openModal({title:(ok?'✅ Accept':'✖ Decline')+' Handoff — '+esc(h.clientName),body:ccHandoffDetail(h)+'<label class="lbl">'+(ok?'Note (optional)':'Why are you declining? *')+'</label><textarea class="field" id="wfh-response" rows="3"></textarea>',btns:'<button class="btn-sm" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="wfRespondHandoff('+h.id+',\''+status+'\')">'+(ok?'Accept — it’s mine now':'Decline')+'</button>'});
+}
+function ccHandoffDetail(h){return'<div class="cc-note-grid" style="margin-bottom:10px;padding:10px;background:#F7F9FA;border:1px solid var(--ln);border-radius:10px"><div class="k">From</div><div class="v">'+esc(h.from)+' → '+esc(h.to)+' · '+wfWhen(h.createdAt)+'</div><div class="k">Why</div><div class="v">'+esc(h.why||h.note||'—')+'</div><div class="k">Completed</div><div class="v">'+esc(h.done||'—')+'</div><div class="k">Still to do</div><div class="v"><strong>'+esc(h.need||'—')+'</strong></div></div>';}
+function wfRespondHandoff(id,status){
+  var w=wfEnsure(),h=w.handoffs.find(function(x){return Number(x.id)===Number(id);});if(!h||h.status!=='Pending'||h.to!==wfActor())return;var resp=tv('wfh-response').trim();if(status==='Declined'&&!resp){toast('Say why you are declining.');return;}
+  h.status=status;h.responseNote=resp;h.respondedAt=Date.now();h.respondedBy=wfActor();
+  var c=ccFind(h.clientRecordId);
+  if(c){if(status==='Accepted'){c.handler=h.to;c.assignedTo=h.to;c.nextAction=h.need||c.nextAction;c.nextActionOwner=h.to;if(!c.nextActionDue)c.nextActionDue=wfAddDays(wfToday(),1);}ccLog(c,'Handoff','Handoff '+status.toLowerCase()+' by '+h.to+'.'+(resp?' '+resp:''));ccTouch(c);wfAudit('Handoff '+h.from+' → '+h.to+' '+status.toLowerCase(),c,'handoff');}
+  addInbox(h.from,h.to+' '+status.toLowerCase()+' your handoff of '+h.clientName+'.'+(resp?' Note: '+resp:''));
+  fbSave();renderInbox();closeModal();wfSetTab('handoffs');toast(status==='Accepted'?h.clientName+' is now with you.':'Handoff declined.');
+}
+function wfCancelHandoff(id){
+  var w=wfEnsure(),h=w.handoffs.find(function(x){return Number(x.id)===Number(id);});if(!h||h.status!=='Pending')return;if(h.from!==wfActor()&&!ccCan('viewReports')){toast('Only the sender or a manager can cancel.');return;}if(!confirm('Cancel the handoff of '+h.clientName+' to '+h.to+'?'))return;
+  h.status='Cancelled';h.respondedAt=Date.now();h.respondedBy=wfActor();var c=ccFind(h.clientRecordId);if(c){ccLog(c,'Handoff','Handoff to '+h.to+' cancelled.');wfAudit('Cancelled handoff to '+h.to,c,'handoff');}
+  addInbox(h.to,'The handoff of '+h.clientName+' from '+h.from+' was cancelled.');fbSave();renderInbox();renderWorkflow();toast('Handoff cancelled.');
+}
+function wfRenderHandoffs(w){
+  var me=wfActor(),p=document.getElementById('wfPendingHandoffs');if(!p)return;
+  var pending=w.handoffs.filter(function(h){return h.status==='Pending'&&h.to===me;});
+  var sent=w.handoffs.filter(function(h){return h.status==='Pending'&&h.from===me;});
+  var tc=document.getElementById('wfHandoffTabCount');if(tc)tc.textContent=pending.length?'('+pending.length+')':'';
+  p.innerHTML=pending.length?pending.map(function(h){return'<div class="wf-handoff-card pending"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:flex-start"><div style="flex:1;min-width:240px"><a href="#" onclick="ccOpenProfile('+h.clientRecordId+');return false" style="font-size:13px;font-weight:800;color:var(--navy)">'+esc(h.clientName)+'</a>'+ccHandoffDetail(h)+'</div><div class="wf-actions"><button class="btn-sm" onclick="wfOpenHandoffResponse('+h.id+',\'Declined\')">Decline</button><button class="btn-pri" onclick="wfOpenHandoffResponse('+h.id+',\'Accepted\')">Accept</button></div></div></div>';}).join(''):'<div class="empty">No handoffs are waiting for you.</div>';
+  var sp=document.getElementById('wfSentHandoffs');if(sp)sp.innerHTML=sent.length?sent.map(function(h){return'<div class="cc-alert" style="cursor:default"><div style="flex:1"><strong>'+esc(h.clientName)+'</strong> → '+esc(h.to)+'<div class="wf-muted">Sent '+wfWhen(h.createdAt)+' · waiting for them to accept</div></div><button class="btn-sm" onclick="wfCancelHandoff('+h.id+')">Cancel</button></div>';}).join(''):'<div class="empty">Nothing waiting.</div>';
+  var rows=document.getElementById('wfHandoffRows');if(rows){var hs=w.handoffs.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);});rows.innerHTML=hs.length?hs.slice(0,1000).map(function(h){var st=String(h.status||'Pending');return'<tr style="cursor:pointer" onclick="ccOpenProfile('+h.clientRecordId+')"><td>'+wfWhen(h.createdAt)+'</td><td><strong>'+esc(h.clientName)+'</strong></td><td>'+esc(h.from)+' → '+esc(h.to)+'</td><td><span class="wf-status wf-handoff '+st.toLowerCase()+'">'+esc(st)+'</span>'+(h.respondedAt?'<div class="wf-muted">'+wfWhen(h.respondedAt)+'</div>':'')+'</td><td>'+esc(h.why||h.note||'—')+'</td><td>'+esc(h.done||'—')+'</td><td>'+esc(h.need||'—')+'</td><td>'+esc(h.responseNote||'—')+'</td></tr>';}).join(''):'<tr><td colspan="8"><div class="empty">No handoffs yet.</div></td></tr>';}
+}
+function wfExportHandoffs(){var w=wfEnsure(),h=['Sent','Client','From','To','Status','Responded','Why','Completed','Still To Do','Response'],rows=w.handoffs.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);}).map(function(x){return[wfWhen(x.createdAt),x.clientName,x.from,x.to,x.status,x.respondedAt?wfWhen(x.respondedAt):'',x.why||x.note,x.done,x.need,x.responseNote];});wfDownload('OGO_Handoffs_'+wfToday()+'.csv',[h].concat(rows));}
 
 /* ── SETUP ── */
 function ccRenderSetup(w){
@@ -2431,17 +2558,18 @@ function ccRenderSetup(w){
   var roleOrder=CC_ROLES.map(function(r){return'<th style="text-align:center">'+esc(r.split(' / ')[0])+'</th>';}).join('');
   var status='<div class="cc-setup-sec"><h4>Status definitions</h4><div class="meta" style="margin-bottom:6px">One meaning per value, so everyone uses the same words. “Target days” drives the “sitting too long” alerts.</div><div class="g"><div class="card s6" style="box-shadow:none"><div class="tbl-wrap" style="padding:8px"><table class="table" style="min-width:420px"><thead><tr><th>Preparation Status</th><th>Means</th><th>Target days</th></tr></thead><tbody>'
     +CC_PREP.map(function(s){return'<tr><td><span class="cc-pill cc-pill-'+s.cls+'">'+esc(s.k)+'</span></td><td style="font-size:11px;min-width:200px">'+esc(s.def)+'</td><td>'+(s.stale?(admin?'<input class="field" style="width:64px;padding:5px 7px" type="number" min="1" max="60" value="'+ccStaleDays(s.k)+'" data-k="'+esc(s.k)+'" onchange="ccSetStale(this.dataset.k,this.value)">':ccStaleDays(s.k)):'—')+'</td></tr>';}).join('')
-    +'</tbody></table></div><div class="meta" style="padding:0 8px 8px">Anyone can change the Preparation Status. When the last required document is received, Missing Documents moves to Needs Work automatically.</div></div><div class="card s6" style="box-shadow:none"><div class="tbl-wrap" style="padding:8px"><table class="table" style="min-width:380px"><thead><tr><th>IRS Status</th><th>Means</th></tr></thead><tbody><tr><td><span class="cc-pill cc-pill-none">'+CC_IRS_NONE+'</span></td><td style="font-size:11px">The return has not gone to the IRS yet.</td></tr>'
+    +'</tbody></table></div><div class="meta" style="padding:0 8px 8px">Usual flow: Missing Documents → Ready to Send → (Needs Work when necessary). Client Opted Out keeps the client on the dashboard. Anyone can change it.</div></div><div class="card s6" style="box-shadow:none"><div class="tbl-wrap" style="padding:8px"><table class="table" style="min-width:380px"><thead><tr><th>IRS Status</th><th>Means</th></tr></thead><tbody><tr><td><span class="cc-pill cc-pill-none">'+CC_IRS_NONE+'</span></td><td style="font-size:11px">The return has not gone to the IRS yet.</td></tr>'
     +CC_IRS.map(function(s){return'<tr><td><span class="cc-pill cc-pill-'+s.cls+'">'+esc(s.k)+'</span></td><td style="font-size:11px">'+esc(s.def)+'</td></tr>';}).join('')
-    +'</tbody></table></div><div class="meta" style="padding:0 8px 8px">IRS Status can be changed by: '+CC_IRS_ROLES.map(esc).join(', ')+'. Marking Submitted when preparation is not Ready to Send asks for confirmation. Rejected asks for the rejection code.</div></div></div></div>';
+    +'</tbody></table></div><div class="meta" style="padding:0 8px 8px">IRS Status can be changed by: '+CC_IRS_ROLES.map(esc).join(', ')+'. Flow: Not submitted → Submitted → Accepted. Rejected: record the code (required) → Preparation goes to Needs Work → Resubmitted → Accepted.</div></div></div></div>';
   var roles='<div class="cc-setup-sec"><h4>Roles &amp; permissions</h4><div class="meta" style="margin-bottom:6px">Your role: <strong>'+esc(ccMyRole())+'</strong>. '+(admin?'Change an employee’s role below.':'Only an Administrator can change roles.')+'</div><div class="g"><div class="card s6" style="box-shadow:none"><div class="tbl-wrap" style="padding:8px"><table class="table" style="min-width:380px"><thead><tr><th>Employee</th><th>Role</th></tr></thead><tbody>'+wfStaffNames().map(function(n){var r=ccRole(n);return'<tr><td><strong>'+esc(n)+'</strong></td><td>'+(admin?'<select class="field" style="padding:5px 7px" data-n="'+esc(n)+'" onchange="ccSetRole(this.dataset.n,this.value)">'+wfOpts(CC_ROLES,r)+'</select>':esc(r))+'</td></tr>';}).join('')+'</tbody></table></div></div><div class="card s6" style="box-shadow:none"><div class="tbl-wrap" style="padding:8px"><table class="table" style="min-width:560px"><thead><tr><th>Permission</th>'+roleOrder+'</tr></thead><tbody><tr><td style="font-size:11px">Change IRS Status</td>'+CC_ROLES.map(function(r){return'<td style="text-align:center">'+(CC_IRS_ROLES.indexOf(r)>-1?'&#10003;':'')+'</td>';}).join('')+'</tr>'+Object.keys(CC_PERMS).map(function(p){return'<tr><td style="font-size:11px">'+esc(CC_PERM_LABELS[p])+'</td>'+CC_ROLES.map(function(r){return'<td style="text-align:center">'+(CC_PERMS[p].indexOf(r)>-1?'&#10003;':'')+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div></div></div><div class="meta">Every view, edit, status change, and financial change is written to the Access &amp; Change Log (Management tab).</div></div>';
   var alerts='<div class="cc-setup-sec"><h4>Alert rules</h4><div class="form-grid" style="grid-template-columns:repeat(2,minmax(0,260px))"><div><label class="lbl">Follow up on document requests after (days)</label><input class="field" type="number" min="1" max="30" value="'+st.followUpDays+'" '+(admin?'onchange="ccSetSetting(\'followUpDays\',this.value)"':'disabled')+'></div><div><label class="lbl">Flag no activity after (days)</label><input class="field" type="number" min="1" max="90" value="'+st.noActivityDays+'" '+(admin?'onchange="ccSetSetting(\'noActivityDays\',this.value)"':'disabled')+'></div></div><div class="meta" style="margin-top:6px">Automatic alerts: IRS rejected, resend needed, missing documents never requested, overdue follow-ups, sitting too long in a status, ready but not sent, overdue next actions, no preparation status, unpaid balances after submission, and no recent activity.</div></div>';
-  var checklists='<div class="cc-setup-sec"><h4>Missing-documents checklists</h4><div class="tbl-wrap"><table class="table" style="min-width:760px"><thead><tr><th>Service</th><th>Items</th></tr></thead><tbody>'+CC_SERVICES.map(function(s){return'<tr><td><strong>'+esc(s)+'</strong></td><td style="font-size:11px">'+CC_TEMPLATES[s].map(function(k){return esc(CC_ITEMS[k].l)+(CC_ITEMS[k].ph==='file'?' <span class="wf-muted">(to file)</span>':'')+(CC_ITEMS[k].opt?' <span class="wf-muted">(optional)</span>':'');}).join(' · ')+'</td></tr>';}).join('')+'</tbody></table></div></div>';
-  var folders='<div class="cc-setup-sec"><h4>Folder &amp; naming standard</h4><div class="cc-box" style="font-size:11px;line-height:1.7"><strong>One official folder per client, in TaxDome.</strong> Search the client ID before creating a new one.<br><code>'+esc('{Client ID} {Client Name} / {Tax Year} / {NN Category}')+'</code><br>Categories: '+CC_DOC_CATS.map(function(x){return x[0]+' '+esc(x[1]);}).join(' · ')+'<br>File names: <code>{TaxYear}_{ClientID}_{NNCategory}_{Short-Description}.pdf</code> — e.g. <code>2025_OGO-26001_02Income_W2-Acme-Corp.pdf</code></div></div>';
+  var checklists='<div class="cc-setup-sec"><h4>Checklists (match the office paper checklist)</h4><div class="meta" style="margin-bottom:6px">'+(admin?'Edit a service to match the physical checklist exactly: one item per line. Add <code>(optional)</code> or <code>(to file)</code> at the end of a line when it applies. Changes apply to new clients.':'Only an Administrator can edit the checklists.')+'</div><div class="tbl-wrap"><table class="table" style="min-width:760px"><thead><tr><th>Service</th><th>Items</th><th></th></tr></thead><tbody>'+CC_SERVICES.map(function(s){var custom=!!(st.checklists&&st.checklists[ccKey(s)]&&st.checklists[ccKey(s)].length);return'<tr><td><strong>'+esc(s)+'</strong>'+(custom?'<div class="wf-muted">Office version</div>':'<div class="wf-muted">Default</div>')+'</td><td style="font-size:11px">'+ccChecklistDef(s).map(function(d){return esc(d.l)+(d.ph==='file'?' <span class="wf-muted">(to file)</span>':'')+(d.req===false?' <span class="wf-muted">(optional)</span>':'');}).join(' · ')+'</td><td>'+(admin?'<button class="btn-sm" data-s="'+esc(s)+'" onclick="ccEditChecklist(this.dataset.s)">Edit</button>':'')+'</td></tr>';}).join('')+'</tbody></table></div></div>';
   var tools='<div class="cc-setup-sec"><h4>Import</h4><div class="meta" style="margin-bottom:6px">Bring in clients from an intake spreadsheet (columns: Name, Tax Year, Service, Office). You are recorded as Created By; duplicates are skipped.</div><button class="btn-sm" onclick="ccImportIntake()">&#128229; Import intake CSV</button></div>';
   var dec='<div class="cc-setup-sec"><h4>Decisions still to finalize</h4>'+CC_DECISIONS.map(function(q,i){var d=st.decisions[i]||{};return'<div class="cc-alert '+(d.status==='Decided'?'':'yellow')+'" style="cursor:default"><div style="flex:1"><strong>'+(i+1)+'. '+esc(q)+'</strong>'+(d.note?'<div class="wf-muted" style="color:var(--navy)">'+esc(d.note)+(d.by?' — '+esc(d.by):'')+'</div>':'<div class="wf-muted">Open</div>')+'</div>'+(admin?'<button class="btn-sm" onclick="ccEditDecision('+i+')">'+(d.status==='Decided'?'Edit':'Record decision')+'</button>':'')+'</div>';}).join('')+'</div>';
-  el.innerHTML=status+roles+alerts+checklists+folders+tools+dec;
+  el.innerHTML=status+checklists+roles+alerts+tools+dec;
 }
+function ccEditChecklist(service){if(!ccCan('settings'))return;var lines=ccChecklistDef(service).map(function(d){return d.l+(d.req===false?' (optional)':'')+(d.ph==='file'?' (to file)':'');}).join('\n');openModal({title:'Checklist — '+esc(service),body:'<div class="meta" style="margin-bottom:6px">One item per line, in the same order as the office paper checklist.</div><textarea class="field" id="ccck-t" rows="12" style="font-family:inherit">'+esc(lines)+'</textarea>',btns:'<button class="btn-sm" onclick="closeModal()">Cancel</button><button class="btn-sm" data-s="'+esc(service)+'" onclick="ccSaveChecklist(this.dataset.s,true)">Reset to default</button><button class="btn-pri" data-s="'+esc(service)+'" onclick="ccSaveChecklist(this.dataset.s)">Save</button>'});}
+function ccSaveChecklist(service,reset){if(!ccCan('settings'))return;var w=wfEnsure();if(reset){delete w.settings.checklists[ccKey(service)];}else{var items=tv('ccck-t').split('\n').map(function(x){return x.trim();}).filter(Boolean).map(function(x){var opt=/\(optional\)/i.test(x),file=/\(to file\)/i.test(x);return{l:x.replace(/\((optional|to file)\)/ig,'').trim(),ph:file?'file':'prep',req:!opt};}).filter(function(d){return d.l;});if(!items.length){toast('Add at least one item.');return;}w.settings.checklists[ccKey(service)]=items;}wfAudit((reset?'Reset':'Updated')+' checklist for '+service,null,'edit');fbSave();closeModal();renderWorkflow();toast('Checklist saved for '+service+'.');}
 function ccSetStale(k,v){if(!ccCan('settings'))return;var w=wfEnsure(),n=Math.max(1,Math.min(60,Number(v)||1));w.settings.stale[ccKey(k)]=n;wfAudit('Set target days for '+k+' to '+n,null,'edit');fbSave();renderWorkflow();}
 function ccSetRole(n,r){if(!ccCan('settings'))return;var w=wfEnsure();w.settings.roles[ccKey(n)]=r;wfAudit('Set '+n+' role to '+r,null,'edit');fbSave();toast(n+' is now '+r+'.');renderWorkflow();}
 function ccSetSetting(k,v){if(!ccCan('settings'))return;var w=wfEnsure();w.settings[k]=Math.max(0,Number(v)||0);wfAudit('Changed alert setting '+k,null,'edit');fbSave();renderWorkflow();}
@@ -2467,9 +2595,9 @@ function ccImportCommit(){
 }
 function wfCsv(v){var x=String(v==null?'':v);if(/^[=+\-@]/.test(x))x="'"+x;return /[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x;}
 function wfDownload(name,rows){var text=rows.map(function(r){return r.map(wfCsv).join(',');}).join('\n'),blob=new Blob([text],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u);}
-function wfExportClients(){var fin=ccCan('viewFinance'),alerts=ccAlerts(),h=['Client ID','Client Name','Tax Year','Service','Office','Created By','Created On','Preparer','Preparation Status','IRS Status','Rejection Code','Submitted On','Missing Items','Next Action','Responsible','Due'].concat(fin?['Fee','Paid','Balance']:[]),rows=wfFilteredClients(alerts).map(function(c){return[c.clientId,c.name,c.taxYear,c.service,c.office,c.createdBy,c.createdAt?ldate(c.createdAt):'',c.preparer,c.prep||CC_PREP_NONE,c.irs||CC_IRS_NONE,c.rejectionCode,c.submittedDate,ccOutstanding(c).map(function(i){return i.l;}).join('; '),c.nextAction,c.nextActionOwner,c.nextActionDue].concat(fin?[(c.fin||{}).fee,(c.fin||{}).paid,ccBalance(c)]:[]);});wfAudit('Exported '+rows.length+' client rows',null,'edit');fbSave();wfDownload('OGO_Clients_'+wfToday()+'.csv',[h].concat(rows));}
+function wfExportClients(){var fin=ccCan('viewFinance'),alerts=ccAlerts(),h=['Client ID','Client Name','Tax Year','Service','Office','Created By','Created On','Now With','Preparation Status','IRS Status','Rejection Code','Submitted On','Submitted By','Accepted On','Final Numbers Given By','Missing Items','Next Action','Responsible','Due','TaxDome Link'].concat(fin?['Fee','Paid','Balance']:[]),rows=wfFilteredClients(alerts).map(function(c){return[c.clientId,c.name,c.taxYear,c.service,c.office,c.createdBy,c.createdAt?ldate(c.createdAt):'',ccHandler(c),c.prep||CC_PREP_NONE,c.irs||CC_IRS_NONE,c.rejectionCode,c.submittedDate,c.submittedBy,c.acceptedDate,c.finalBy,ccOutstanding(c).map(function(i){return i.l;}).join('; '),c.nextAction,c.nextActionOwner,c.nextActionDue,c.folderUrl].concat(fin?[(c.fin||{}).fee,(c.fin||{}).paid,ccBalance(c)]:[]);});wfAudit('Exported '+rows.length+' client rows',null,'edit');fbSave();wfDownload('OGO_Clients_'+wfToday()+'.csv',[h].concat(rows));}
 /* count of my urgent items, for the nav badge and dashboard */
-function ccMyUrgentCount(){if(!CU||!S.clientWorkflow)return 0;var me=CU.name,alerts=ccAlerts();return wfEnsure().clients.filter(function(c){return ccIsActive(c)&&ccMine(c,me)&&(c.irs==='Rejected'||c.irs==='Resend'||ccSeverity(c,alerts)==='red');}).length;}
+function ccMyUrgentCount(){if(!CU||!S.clientWorkflow)return 0;var me=CU.name,alerts=ccAlerts();return wfEnsure().clients.filter(function(c){var h=ccPendingHandoff(c);return (h&&h.to===me)||(ccIsActive(c)&&ccMine(c,me)&&(c.irs==='Rejected'||c.irs==='Resend'||ccSeverity(c,alerts)==='red'));}).length;}
 
 /* ── RENDER ALL ── */
 function renderAll(){
