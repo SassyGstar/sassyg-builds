@@ -794,6 +794,7 @@ function makeDefault(){
     satSync:'',
     seededEvents:[],
     staffSync:'',
+    recSync:'',
     workSaturdays:[{id:800,date:'2027-01-23',note:'',office:'All'},{id:801,date:'2027-01-30',note:'',office:'All'},{id:802,date:'2027-02-06',note:'',office:'All'},{id:803,date:'2027-02-13',note:'',office:'All'},{id:804,date:'2027-02-20',note:'',office:'All'},{id:805,date:'2027-02-27',note:'',office:'All'},{id:806,date:'2027-03-06',note:'',office:'All'},{id:807,date:'2027-03-13',note:'Tentative - confirm final date',office:'All'}],
     removedSeeds:{events:[],employees:[]}
   };
@@ -830,10 +831,83 @@ function addNotif(text,scope){if(!S.notifications)S.notifications=[];S.notificat
 function addInbox(toName,text){if(!S.inbox)S.inbox={};if(!S.inbox[toName])S.inbox[toName]=[];S.inbox[toName].unshift({id:Date.now()+'_'+Math.random().toString(36).slice(2,5),text,ts:Date.now(),read:false});S.inbox[toName]=S.inbox[toName].slice(0,30);}
 
 /* ── FIREBASE: ONE PATH, EVERYTHING ── */
+/* ---- PER-RECORD SYNC -------------------------------------------------
+   Requests and the Client Workflow records (clients, handoffs, the audit
+   trail and the contact log) are each written to Firebase one record at a
+   time on their own path. Two employees acting in the same moment write to
+   different places, so neither can overwrite the other's work. The rest of
+   the portal still saves as a single record, which is fine for data only
+   admins change.
+   Collections live as id-keyed maps in Firebase and are rebuilt into arrays
+   on the way in, so none of the rendering code had to change. */
+var REC_SETS=[
+  {path:'requestsById',    get:function(){return S.requests||(S.requests=[]);},
+                           put:function(a){S.requests=a;},
+                           sort:function(a,b){return (Number(a.id)||0)-(Number(b.id)||0);}},
+  {path:'wfClientsById',   get:function(){return wfEnsure().clients;},
+                           put:function(a){wfEnsure().clients=a;},
+                           sort:function(a,b){return (Number(a.id)||0)-(Number(b.id)||0);}},
+  {path:'wfHandoffsById',  get:function(){return wfEnsure().handoffs;},
+                           put:function(a){wfEnsure().handoffs=a;},
+                           sort:function(a,b){return (Number(b.createdAt)||0)-(Number(a.createdAt)||0);}},
+  {path:'wfAuditById',     get:function(){return wfEnsure().audit;},
+                           put:function(a){wfEnsure().audit=a;},
+                           sort:function(a,b){return (Number(b.ts)||0)-(Number(a.ts)||0);}},
+  {path:'wfActivitiesById',get:function(){return wfEnsure().activities;},
+                           put:function(a){wfEnsure().activities=a;},
+                           sort:function(a,b){return (Number(b.ts)||0)-(Number(a.ts)||0);}}
+];
+var recCache={};
+/* An id that will not collide when two devices create a record before syncing.
+   A shared counter could hand the same number to two people at once, which
+   per-record writes would then merge into one record. */
+function newRecId(){return Date.now()*1000+Math.floor(Math.random()*1000);}
+function fbPutRec(path,id,rec){
+  if(!fbRef||fbLock||id===null||id===undefined||id==='')return;
+  fbRef.child(path+'/'+String(id)).set(rec?JSON.parse(JSON.stringify(rec)):null);
+}
+/* Writes only the records that actually changed since the last save, plus a
+   removal for any that disappeared. Called by fbSave, so every existing save
+   in the portal gets this behaviour without changing any of them. */
+function fbSyncRecs(force){
+  if(!fbRef||fbLock)return;
+  REC_SETS.forEach(function(set){
+    var cache=recCache[set.path]||(recCache[set.path]={});
+    var list=[],seen={};
+    try{list=set.get()||[];}catch(e){return;}
+    list.forEach(function(r){
+      if(!r||r.id===null||r.id===undefined)return;
+      var id=String(r.id),j=JSON.stringify(r);
+      seen[id]=1;
+      if(force||cache[id]!==j){fbPutRec(set.path,r.id,r);cache[id]=j;}
+    });
+    Object.keys(cache).forEach(function(id){
+      if(!seen[id]){fbPutRec(set.path,id,null);delete cache[id];}
+    });
+  });
+}
+/* Remembers what the cloud already holds, so a merge coming in does not make
+   the next save rewrite every record as though we had changed them. */
+function recCacheReset(){
+  recCache={};
+  REC_SETS.forEach(function(set){
+    var c=recCache[set.path]={};
+    var list=[];try{list=set.get()||[];}catch(e){return;}
+    list.forEach(function(r){if(r&&r.id!==null&&r.id!==undefined)c[String(r.id)]=JSON.stringify(r);});
+  });
+}
 function fbSave(){
   if(!fbRef||fbLock)return;
+  fbSyncRecs();
   const data=clone(S);
   delete data.activeOffice;delete data.activeSection;delete data.adminMode;
+  /* these are written per record by fbSyncRecs */
+  delete data.requests;
+  REC_SETS.forEach(function(s){delete data[s.path];});
+  if(data.clientWorkflow){
+    delete data.clientWorkflow.clients;delete data.clientWorkflow.handoffs;
+    delete data.clientWorkflow.audit;delete data.clientWorkflow.activities;
+  }
   /* Time clock punches are written on their own per-employee paths by
      fbSavePunch, so they are left out here. Without this, one device
      saving its copy of the record could wipe a punch another device had
@@ -951,7 +1025,7 @@ function fbMerge(remote){
     if(!S.requests)S.requests=[];
     var hasBianca=S.requests.some(function(r){return r.requester==='Bianca Sanchez'&&(r.type==='PTO'||r.type==='Vacation')&&r.dateFrom==='2026-07-28';});
     if(!hasBianca){
-      S.requests.push({id:S.nextId++,type:'PTO',requester:'Bianca Sanchez',office:'Clermont',
+      S.requests.push({id:newRecId(),type:'PTO',requester:'Bianca Sanchez',office:'Clermont',
         dateFrom:'2026-07-28',dateTo:'2026-08-18',ptoHours:'40',ptoYear:'2026',
         status:'Approved',reviewedBy:'Gina Altidor',reviewedAt:'Aug 17, 2026',
         reviewNote:'Time off Jul 28 to Aug 18 2026. 40 hrs PTO (full first-year balance); remaining days not charged to PTO.',
@@ -967,7 +1041,23 @@ function fbMerge(remote){
   if(!S.tc.entries)S.tc.entries={};
   if(!S.tc.active)S.tc.active={};
   if(!S.inbox)S.inbox={};
+  /* Rebuild each per-record collection from its id map. When a map is absent
+     (first run on this build) the legacy array that came down with the record
+     is kept, and the migration below publishes it into the map. */
+  var recNeedsMigration=(S.recSync!=='2026-10-26');
+  REC_SETS.forEach(function(set){
+    var m=S[set.path];
+    if(m&&typeof m==='object'&&!Array.isArray(m)){
+      var arr=Object.keys(m).map(function(k){return m[k];}).filter(function(r){return r&&r.id!==null&&r.id!==undefined;});
+      arr.sort(set.sort);
+      set.put(arr);
+    }
+    delete S[set.path];
+  });
+  if(recNeedsMigration){S.recSync='2026-10-26';evMigrated=true;}
+  recCacheReset();
   fbLock=false;
+  if(recNeedsMigration)fbSyncRecs(true);
   if(evMigrated)fbSave();
   renderAll();
 }
@@ -1409,7 +1499,7 @@ function saveRequest(){
       p.reviewedAt=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
       p.reviewNote='Recorded by '+(CU?CU.name:'Admin');
     }
-    S.requests.push({id:S.nextId++,...p});
+    S.requests.push({id:newRecId(),...p});
     const onBehalf=CU&&who!==CU.name;
     if(onBehalf){
       addLog(CU.name+' recorded a '+p.type+' request for '+who+' ('+p.status+').',p.office,CU.name);
@@ -1491,7 +1581,7 @@ function wfEnsure(){
   if(!w.importedSimpleClientsV1){
     (S.clients||[]).forEach(function(c){
       if(w.clients.some(function(x){return String(x.name||'').toLowerCase()===String(c.name||'').toLowerCase();}))return;
-      w.clients.push({id:w.nextId++,clientId:'',name:c.name||'',taxYear:String(new Date().getFullYear()-1),returnType:'Individual',office:c.office||'Orlando',assignedTo:c.owner||'',reviewer:'',prepStatus:c.status==='Waiting Docs'?'Missing Information':(c.stage==='Review'?'Under Preparer Review':'Intake in Progress'),irsStatus:'Not Submitted',docsComplete:false,taxSlayerEntered:false,numbersReviewed:false,clientUpdateSent:false,communicationMethod:'',consentReceived:false,submittedDate:'',acceptedDate:'',rejectedDate:'',rejectionCode:'',pendingDate:'',refundDate:'',lastContactDate:'',nextAction:'',followUpDate:'',notes:c.notes||'',createdAt:Date.now(),updatedAt:Date.now(),updatedBy:'Portal migration'});
+      w.clients.push({id:newRecId(),clientId:'',name:c.name||'',taxYear:String(new Date().getFullYear()-1),returnType:'Individual',office:c.office||'Orlando',assignedTo:c.owner||'',reviewer:'',prepStatus:c.status==='Waiting Docs'?'Missing Information':(c.stage==='Review'?'Under Preparer Review':'Intake in Progress'),irsStatus:'Not Submitted',docsComplete:false,taxSlayerEntered:false,numbersReviewed:false,clientUpdateSent:false,communicationMethod:'',consentReceived:false,submittedDate:'',acceptedDate:'',rejectedDate:'',rejectionCode:'',pendingDate:'',refundDate:'',lastContactDate:'',nextAction:'',followUpDate:'',notes:c.notes||'',createdAt:Date.now(),updatedAt:Date.now(),updatedBy:'Portal migration'});
     });
     w.importedSimpleClientsV1=true;fbSave();
   }
@@ -1503,7 +1593,7 @@ function wfAddDays(d,n){var x=new Date((d||wfToday())+'T00:00:00');x.setDate(x.g
 function wfDate(v){if(!v)return'—';try{return new Date(v+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}catch(e){return v;}}
 function wfOpts(arr,cur){return arr.map(function(x){return'<option value="'+esc(x)+'" '+(x===cur?'selected':'')+'>'+esc(x)+'</option>';}).join('');}
 function wfChecked(id){var e=document.getElementById(id);return !!(e&&e.checked);}
-function wfAudit(action,c){var w=wfEnsure();w.audit.unshift({id:w.nextId++,action:action,clientId:c&&c.id||'',clientName:c&&c.name||'',actor:wfActor(),ts:Date.now()});w.audit=w.audit.slice(0,1000);}
+function wfAudit(action,c){var w=wfEnsure();w.audit.unshift({id:newRecId(),action:action,clientId:c&&c.id||'',clientName:c&&c.name||'',actor:wfActor(),ts:Date.now()});w.audit=w.audit.slice(0,1000);}
 function wfLatestHandoff(clientId){var w=wfEnsure();return w.handoffs.filter(function(h){return Number(h.clientRecordId)===Number(clientId);}).sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);})[0]||null;}
 function wfHandoffBadge(h){if(!h)return'<span class="wf-muted">No handoff</span>';var st=h.status||'Pending',cl=st.toLowerCase();return'<span class="wf-status wf-handoff '+cl+'">'+esc(st)+'</span><div class="wf-muted" style="margin-top:3px">'+esc(h.from||'—')+' → '+esc(h.to||'—')+'</div>';}
 function wfHandoffDate(ts){if(!ts)return'—';try{return new Date(ts).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){return'—';}}
@@ -1531,7 +1621,7 @@ function renderWorkflow(){
 }
 function wfOpenClient(id){var w=wfEnsure(),c=id?w.clients.find(function(x){return Number(x.id)===Number(id);}):null,d=c||{clientId:'',name:'',taxYear:String(new Date().getFullYear()-1),returnType:'Individual',office:CU?CU.office:'Orlando',assignedTo:CU?CU.name:'',reviewer:'',prepStatus:'New Client / Not Started',irsStatus:'Not Submitted',docsComplete:false,taxSlayerEntered:false,numbersReviewed:false,clientUpdateSent:false,communicationMethod:'',consentReceived:false,submittedDate:'',acceptedDate:'',rejectedDate:'',rejectionCode:'',pendingDate:'',refundDate:'',lastContactDate:'',nextAction:'',followUpDate:'',notes:''};
   var staff=wfStaffNames();openModal({title:(c?'Update':'Add')+' Client Workflow',body:'<input type="hidden" id="wfm-id" value="'+(c?c.id:'')+'"><div class="form-grid"><div><label class="lbl">Internal Client ID</label><input class="field" id="wfm-clientId" value="'+esc(d.clientId)+'" placeholder="OGO-26001"></div><div><label class="lbl">Client Name</label><input class="field" id="wfm-name" value="'+esc(d.name)+'"></div><div><label class="lbl">Tax Year</label><input class="field" id="wfm-taxYear" value="'+esc(d.taxYear)+'"></div><div><label class="lbl">Return Type</label><select class="field" id="wfm-returnType">'+wfOpts(WF_TYPES,d.returnType)+'</select></div><div><label class="lbl">Office</label><select class="field" id="wfm-office">'+wfOpts(['Orlando','Clermont','Winter Haven'],d.office)+'</select></div><div><label class="lbl">Assigned Staff</label><select class="field" id="wfm-assignedTo"><option value="">Unassigned</option>'+wfOpts(staff,d.assignedTo)+'</select><div class="wf-muted" style="margin-top:3px">Use Hand Off to transfer an existing client so acceptance is recorded.</div></div><div><label class="lbl">Reviewer</label><select class="field" id="wfm-reviewer"><option value="">Not assigned</option>'+wfOpts(staff,d.reviewer)+'</select></div><div><label class="lbl">Last Contact Date</label><input class="field" id="wfm-lastContactDate" type="date" value="'+esc(d.lastContactDate)+'"></div><div><label class="lbl">Preparation Status</label><select class="field" id="wfm-prepStatus">'+wfOpts(WF_PREP,d.prepStatus)+'</select></div><div><label class="lbl">IRS Status</label><select class="field" id="wfm-irsStatus">'+wfOpts(WF_IRS,d.irsStatus)+'</select></div><div><label class="lbl">Last Communication Method</label><select class="field" id="wfm-method"><option value="">Not recorded</option>'+wfOpts(WF_METHODS,d.communicationMethod)+'</select></div><div><label class="lbl">Next Follow-Up Date</label><input class="field" id="wfm-followUpDate" type="date" value="'+esc(d.followUpDate)+'"></div><div class="span-2"><label class="lbl">Workflow Checklist</label><div class="wf-checks"><label><input id="wfm-docs" type="checkbox" '+(d.docsComplete?'checked':'')+'> All information received</label><label><input id="wfm-taxslayer" type="checkbox" '+(d.taxSlayerEntered?'checked':'')+'> Entered into TaxSlayer</label><label><input id="wfm-reviewed" type="checkbox" '+(d.numbersReviewed?'checked':'')+'> Numbers reviewed / approved</label><label><input id="wfm-update" type="checkbox" '+(d.clientUpdateSent?'checked':'')+'> Client update sent</label><label><input id="wfm-consent" type="checkbox" '+(d.consentReceived?'checked':'')+'> Client authorization received</label></div></div><div><label class="lbl">IRS Submission Date</label><input class="field" id="wfm-submittedDate" type="date" value="'+esc(d.submittedDate)+'"></div><div><label class="lbl">IRS Acceptance Date</label><input class="field" id="wfm-acceptedDate" type="date" value="'+esc(d.acceptedDate)+'"></div><div><label class="lbl">IRS Rejection Date</label><input class="field" id="wfm-rejectedDate" type="date" value="'+esc(d.rejectedDate)+'"></div><div><label class="lbl">IRS Rejection Code</label><input class="field" id="wfm-rejectionCode" value="'+esc(d.rejectionCode)+'"></div><div><label class="lbl">IRS Pending Date</label><input class="field" id="wfm-pendingDate" type="date" value="'+esc(d.pendingDate)+'"></div><div><label class="lbl">Refund Issued Date</label><input class="field" id="wfm-refundDate" type="date" value="'+esc(d.refundDate)+'"></div><div class="span-2"><label class="lbl">Next Action</label><input class="field" id="wfm-nextAction" value="'+esc(d.nextAction)+'" placeholder="What happens next and who owns it?"></div><div class="span-2"><label class="lbl">Internal Notes</label><textarea class="field" id="wfm-notes" rows="3" placeholder="No SSN, DOB, bank data, passwords, or tax-document details">'+esc(d.notes)+'</textarea></div></div>',btns:(c?'<button class="btn-sm" onclick="closeModal();wfOpenHandoff('+c.id+')">&#129309; Hand Off</button><button class="btn-sm" onclick="wfArchiveClient('+c.id+')">Archive</button>':'')+'<button class="btn-sm" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="wfSaveClient()">Save Client</button>'});}
-function wfSaveClient(){var w=wfEnsure(),id=Number(tv('wfm-id'))||null,name=tv('wfm-name').trim();if(!name){toast('Enter the client name.');return;}var ex=id?w.clients.find(function(x){return Number(x.id)===id;}):null;var requestedAssigned=tv('wfm-assignedTo');if(ex&&requestedAssigned!==String(ex.assignedTo||'')&&!(CU&&CU.role==='Admin')&&!S.adminMode){toast('Use the Hand Off button to transfer an existing client to another employee.');return;}var c={id:ex?ex.id:w.nextId++,clientId:tv('wfm-clientId').trim(),name:name,taxYear:tv('wfm-taxYear').trim(),returnType:tv('wfm-returnType'),office:tv('wfm-office'),assignedTo:tv('wfm-assignedTo'),reviewer:tv('wfm-reviewer'),prepStatus:tv('wfm-prepStatus'),irsStatus:tv('wfm-irsStatus'),docsComplete:wfChecked('wfm-docs'),taxSlayerEntered:wfChecked('wfm-taxslayer'),numbersReviewed:wfChecked('wfm-reviewed'),clientUpdateSent:wfChecked('wfm-update'),communicationMethod:tv('wfm-method'),consentReceived:wfChecked('wfm-consent'),submittedDate:tv('wfm-submittedDate'),acceptedDate:tv('wfm-acceptedDate'),rejectedDate:tv('wfm-rejectedDate'),rejectionCode:tv('wfm-rejectionCode').trim(),pendingDate:tv('wfm-pendingDate'),refundDate:tv('wfm-refundDate'),lastContactDate:tv('wfm-lastContactDate'),nextAction:tv('wfm-nextAction').trim(),followUpDate:tv('wfm-followUpDate'),notes:tv('wfm-notes').trim(),createdAt:ex?ex.createdAt:Date.now(),updatedAt:Date.now(),updatedBy:wfActor()};if(c.irsStatus==='Refund Issued'&&!c.refundDate){toast('Enter the refund issued date.');return;}if(c.irsStatus==='IRS Rejected'&&!c.rejectionCode){toast('Enter the IRS rejection code.');return;}if(c.submittedDate&&!c.consentReceived){toast('Record client authorization before marking the return submitted.');return;}if(ex)w.clients[w.clients.indexOf(ex)]=c;else w.clients.push(c);wfAudit(ex?'Updated client workflow':'Added client workflow',c);addLog((ex?'Updated':'Added')+' Client Workflow: '+c.name,c.office,wfActor());fbSave();closeModal();renderWorkflow();toast(ex?'Client workflow updated.':'Client added to workflow.');}
+function wfSaveClient(){var w=wfEnsure(),id=Number(tv('wfm-id'))||null,name=tv('wfm-name').trim();if(!name){toast('Enter the client name.');return;}var ex=id?w.clients.find(function(x){return Number(x.id)===id;}):null;var requestedAssigned=tv('wfm-assignedTo');if(ex&&requestedAssigned!==String(ex.assignedTo||'')&&!(CU&&CU.role==='Admin')&&!S.adminMode){toast('Use the Hand Off button to transfer an existing client to another employee.');return;}var c={id:ex?ex.id:newRecId(),clientId:tv('wfm-clientId').trim(),name:name,taxYear:tv('wfm-taxYear').trim(),returnType:tv('wfm-returnType'),office:tv('wfm-office'),assignedTo:tv('wfm-assignedTo'),reviewer:tv('wfm-reviewer'),prepStatus:tv('wfm-prepStatus'),irsStatus:tv('wfm-irsStatus'),docsComplete:wfChecked('wfm-docs'),taxSlayerEntered:wfChecked('wfm-taxslayer'),numbersReviewed:wfChecked('wfm-reviewed'),clientUpdateSent:wfChecked('wfm-update'),communicationMethod:tv('wfm-method'),consentReceived:wfChecked('wfm-consent'),submittedDate:tv('wfm-submittedDate'),acceptedDate:tv('wfm-acceptedDate'),rejectedDate:tv('wfm-rejectedDate'),rejectionCode:tv('wfm-rejectionCode').trim(),pendingDate:tv('wfm-pendingDate'),refundDate:tv('wfm-refundDate'),lastContactDate:tv('wfm-lastContactDate'),nextAction:tv('wfm-nextAction').trim(),followUpDate:tv('wfm-followUpDate'),notes:tv('wfm-notes').trim(),createdAt:ex?ex.createdAt:Date.now(),updatedAt:Date.now(),updatedBy:wfActor()};if(c.irsStatus==='Refund Issued'&&!c.refundDate){toast('Enter the refund issued date.');return;}if(c.irsStatus==='IRS Rejected'&&!c.rejectionCode){toast('Enter the IRS rejection code.');return;}if(c.submittedDate&&!c.consentReceived){toast('Record client authorization before marking the return submitted.');return;}if(ex)w.clients[w.clients.indexOf(ex)]=c;else w.clients.push(c);wfAudit(ex?'Updated client workflow':'Added client workflow',c);addLog((ex?'Updated':'Added')+' Client Workflow: '+c.name,c.office,wfActor());fbSave();closeModal();renderWorkflow();toast(ex?'Client workflow updated.':'Client added to workflow.');}
 function wfArchiveClient(id){var w=wfEnsure(),c=w.clients.find(function(x){return Number(x.id)===Number(id);});if(!c)return;if(!confirm('Archive '+c.name+'? The record stays in workflow history.'))return;c.prepStatus='Closed or Archived';c.updatedAt=Date.now();c.updatedBy=wfActor();wfAudit('Archived client workflow',c);addLog('Archived Client Workflow: '+c.name,c.office,wfActor());fbSave();closeModal();renderWorkflow();toast('Client archived.');}
 function wfOpenHandoff(clientId){
   var w=wfEnsure(),c=w.clients.find(function(x){return Number(x.id)===Number(clientId);});if(!c){toast('Client not found.');return;}
@@ -1543,7 +1633,7 @@ function wfOpenHandoff(clientId){
 }
 function wfSendHandoff(clientId){
   var w=wfEnsure(),c=w.clients.find(function(x){return Number(x.id)===Number(clientId);}),to=tv('wfh-to'),note=tv('wfh-note').trim();if(!c){toast('Client not found.');return;}if(!to){toast('Select the employee receiving the handoff.');return;}if(to===wfActor()){toast('Choose another employee.');return;}if(w.handoffs.some(function(h){return Number(h.clientRecordId)===Number(c.id)&&h.status==='Pending';})){toast('A handoff is already pending for this client.');return;}
-  var h={id:w.nextId++,clientRecordId:c.id,clientName:c.name,from:wfActor(),to:to,status:'Pending',note:note,responseNote:'',createdAt:Date.now(),respondedAt:null,respondedBy:'',cancelledAt:null,cancelledBy:''};w.handoffs.unshift(h);w.handoffs=w.handoffs.slice(0,3000);c.updatedAt=Date.now();c.updatedBy=wfActor();wfAudit('Sent client handoff to '+to,c);addLog('Client handoff sent: '+c.name+' from '+h.from+' to '+h.to+'.',c.office,wfActor());addInbox(to,'Client handoff pending: '+c.name+' from '+h.from+'. Open Client Workflow → Handoffs to accept or decline.');fbSave();closeModal();wfTab='handoffs';wfSetTab('handoffs');renderInbox();toast('Handoff sent to '+to+'. Waiting for acceptance.');
+  var h={id:newRecId(),clientRecordId:c.id,clientName:c.name,from:wfActor(),to:to,status:'Pending',note:note,responseNote:'',createdAt:Date.now(),respondedAt:null,respondedBy:'',cancelledAt:null,cancelledBy:''};w.handoffs.unshift(h);w.handoffs=w.handoffs.slice(0,3000);c.updatedAt=Date.now();c.updatedBy=wfActor();wfAudit('Sent client handoff to '+to,c);addLog('Client handoff sent: '+c.name+' from '+h.from+' to '+h.to+'.',c.office,wfActor());addInbox(to,'Client handoff pending: '+c.name+' from '+h.from+'. Open Client Workflow → Handoffs to accept or decline.');fbSave();closeModal();wfTab='handoffs';wfSetTab('handoffs');renderInbox();toast('Handoff sent to '+to+'. Waiting for acceptance.');
 }
 function wfOpenHandoffResponse(id,status){
   var w=wfEnsure(),h=w.handoffs.find(function(x){return Number(x.id)===Number(id);});if(!h||h.status!=='Pending'){toast('This handoff is no longer pending.');return;}if(h.to!==wfActor()){toast('Only '+h.to+' can accept or decline this handoff.');return;}
@@ -1561,7 +1651,7 @@ function wfRenderHandoffs(){
 }
 function wfExportHandoffs(){var w=wfEnsure(),h=['Sent','Client','From','To','Status','Responded At','Responded By','Handoff Notes','Response Note'],rows=w.handoffs.slice().sort(function(a,b){return (b.createdAt||0)-(a.createdAt||0);}).map(function(x){return[wfHandoffDate(x.createdAt),x.clientName,x.from,x.to,x.status,x.respondedAt?wfHandoffDate(x.respondedAt):'',x.respondedBy,x.note,x.responseNote];});wfDownload('OGO_Client_Handoffs_'+wfToday()+'.csv',[h].concat(rows));}
 function wfOpenContact(clientId){var w=wfEnsure(),active=w.clients.filter(function(c){return c.prepStatus!=='Closed or Archived';}).sort(function(a,b){return String(a.name).localeCompare(String(b.name));});if(!active.length){toast('Add a Client Workflow record first.');wfSetTab('clients');return;}var chosen=clientId||active[0].id,c=active.find(function(x){return Number(x.id)===Number(chosen);})||active[0];openModal({title:'Log Client Contact',body:'<div class="form-grid"><div class="span-2"><label class="lbl">Client</label><select class="field" id="wfa-client">'+active.map(function(x){return'<option value="'+x.id+'" '+(x.id===c.id?'selected':'')+'>'+esc(x.name)+(x.clientId?' · '+esc(x.clientId):'')+'</option>';}).join('')+'</select></div><div><label class="lbl">Contact Date</label><input class="field" id="wfa-date" type="date" value="'+wfToday()+'"></div><div><label class="lbl">Method</label><select class="field" id="wfa-method">'+wfOpts(WF_METHODS,'Telephone')+'</select></div><div><label class="lbl">Staff Member</label><input class="field" id="wfa-staff" value="'+esc(wfActor())+'" readonly></div><div><label class="lbl">Office</label><select class="field" id="wfa-office">'+wfOpts(['Orlando','Clermont','Winter Haven'],c.office||CU.office)+'</select></div><div class="span-2"><label class="lbl">What Was Completed or Communicated?</label><textarea class="field" id="wfa-summary" rows="4"></textarea></div><div class="span-2"><label class="lbl">Next Action</label><input class="field" id="wfa-nextAction" value="'+esc(c.nextAction||'')+'"></div><div><label class="lbl">Follow-Up Date</label><input class="field" id="wfa-followUpDate" type="date" value="'+esc(c.followUpDate||'')+'"></div><div><label class="lbl">Update Client Last Method</label><select class="field" id="wfa-updateMethod"><option value="yes">Yes</option><option value="no">No</option></select></div></div>',btns:'<button class="btn-sm" onclick="closeModal()">Cancel</button><button class="btn-pri" onclick="wfSaveContact()">Save Contact</button>'});}
-function wfSaveContact(){var w=wfEnsure(),cid=Number(tv('wfa-client')),c=w.clients.find(function(x){return Number(x.id)===cid;}),sum=tv('wfa-summary').trim();if(!c){toast('Select a client.');return;}if(!sum){toast('Enter what was completed or communicated.');return;}var a={id:w.nextId++,clientRecordId:c.id,clientName:c.name,date:tv('wfa-date')||wfToday(),ts:Date.now(),staff:wfActor(),office:tv('wfa-office'),method:tv('wfa-method'),summary:sum,nextAction:tv('wfa-nextAction').trim(),followUpDate:tv('wfa-followUpDate'),createdBy:wfActor()};w.activities.unshift(a);w.activities=w.activities.slice(0,5000);c.lastContactDate=a.date;c.nextAction=a.nextAction;c.followUpDate=a.followUpDate;c.clientUpdateSent=true;if(tv('wfa-updateMethod')==='yes')c.communicationMethod=a.method;c.updatedAt=Date.now();c.updatedBy=wfActor();wfAudit('Logged client contact',c);addLog('Client contact: '+c.name,c.office,wfActor());fbSave();closeModal();wfTab='daily';wfSetTab('daily');toast('Client contact logged.');}
+function wfSaveContact(){var w=wfEnsure(),cid=Number(tv('wfa-client')),c=w.clients.find(function(x){return Number(x.id)===cid;}),sum=tv('wfa-summary').trim();if(!c){toast('Select a client.');return;}if(!sum){toast('Enter what was completed or communicated.');return;}var a={id:newRecId(),clientRecordId:c.id,clientName:c.name,date:tv('wfa-date')||wfToday(),ts:Date.now(),staff:wfActor(),office:tv('wfa-office'),method:tv('wfa-method'),summary:sum,nextAction:tv('wfa-nextAction').trim(),followUpDate:tv('wfa-followUpDate'),createdBy:wfActor()};w.activities.unshift(a);w.activities=w.activities.slice(0,5000);c.lastContactDate=a.date;c.nextAction=a.nextAction;c.followUpDate=a.followUpDate;c.clientUpdateSent=true;if(tv('wfa-updateMethod')==='yes')c.communicationMethod=a.method;c.updatedAt=Date.now();c.updatedBy=wfActor();wfAudit('Logged client contact',c);addLog('Client contact: '+c.name,c.office,wfActor());fbSave();closeModal();wfTab='daily';wfSetTab('daily');toast('Client contact logged.');}
 function wfWeeklyClients(){var w=wfEnsure(),office=tv('wfReportOffice'),staff=tv('wfReportStaff');return w.clients.filter(function(c){return (!office||c.office===office)&&(!staff||c.assignedTo===staff);}).sort(function(a,b){return String(a.name).localeCompare(String(b.name));});}
 function wfRenderWeekly(){var rows=document.getElementById('wfWeeklyRows'),kp=document.getElementById('wfWeeklyKpis');if(!rows||!kp)return;var w=wfEnsure(),start=tv('wfWeekStart'),end=tv('wfWeekEnd');if(!start||!end)return;var cs=wfWeeklyClients(),ids={};cs.forEach(function(c){ids[c.id]=1;});var acts=w.activities.filter(function(a){return ids[a.clientRecordId]&&a.date>=start&&a.date<=end;}),by={};acts.forEach(function(a){by[a.clientRecordId]=(by[a.clientRecordId]||0)+1;});var accepted=cs.filter(function(c){return c.acceptedDate&&c.acceptedDate>=start&&c.acceptedDate<=end;}).length,rejected=cs.filter(function(c){return c.rejectedDate&&c.rejectedDate>=start&&c.rejectedDate<=end;}).length,refund=cs.filter(function(c){return c.refundDate&&c.refundDate>=start&&c.refundDate<=end;}).length;kp.innerHTML=[['Clients',cs.length],['Contacts',acts.length],['IRS Accepted',accepted],['Refunds Issued',refund]].map(function(x){return'<div class="wf-kpi"><div class="n">'+x[1]+'</div><div class="t">'+x[0]+'</div></div>';}).join('');rows.innerHTML=cs.length?cs.map(function(c){return'<tr><td><strong>'+esc(c.name)+'</strong></td><td>'+esc(c.assignedTo||'Unassigned')+'</td><td>'+esc(c.prepStatus)+'</td><td>'+esc(c.irsStatus)+'</td><td>'+String(by[c.id]||0)+'</td><td>'+wfDate(c.lastContactDate)+'</td><td>'+esc(c.nextAction||'—')+'</td><td>'+wfDate(c.followUpDate)+'</td><td>'+wfDate(c.refundDate)+'</td></tr>';}).join(''):'<tr><td colspan="9"><div class="empty">No workflow clients in this report.</div></td></tr>';}
 function wfCsv(v){var x=String(v==null?'':v);return /[",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x;}
@@ -1912,7 +2002,7 @@ function ptoAddEntry(empId){
   if(to&&to<from){toast('To date must be on or after the From date.');return;}
   if(hrs!==''&&!isFinite(Number(hrs))){toast('Hours must be a number.');return;}
   if(!S.requests)S.requests=[];
-  S.requests.push({id:S.nextId++,type:'PTO',requester:emp.name,office:emp.office,
+  S.requests.push({id:newRecId(),type:'PTO',requester:emp.name,office:emp.office,
     dateFrom:from,dateTo:to||from,ptoHours:hrs,ptoYear:String(new Date(from+'T00:00:00').getFullYear()),
     status:'Approved',reviewedBy:CU?CU.name:'Admin',
     reviewedAt:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
