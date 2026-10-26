@@ -841,6 +841,9 @@ function addInbox(toName,text){if(!S.inbox)S.inbox={};if(!S.inbox[toName])S.inbo
    Collections live as id-keyed maps in Firebase and are rebuilt into arrays
    on the way in, so none of the rendering code had to change. */
 var REC_SETS=[
+  {path:'clientsById',     get:function(){return S.clients||(S.clients=[]);},
+                           put:function(a){S.clients=a;},
+                           sort:function(a,b){return (Number(a.id)||0)-(Number(b.id)||0);}},
   {path:'requestsById',    get:function(){return S.requests||(S.requests=[]);},
                            put:function(a){S.requests=a;},
                            sort:function(a,b){return (Number(a.id)||0)-(Number(b.id)||0);}},
@@ -902,7 +905,7 @@ function fbSave(){
   const data=clone(S);
   delete data.activeOffice;delete data.activeSection;delete data.adminMode;
   /* these are written per record by fbSyncRecs */
-  delete data.requests;
+  delete data.requests;delete data.clients;
   REC_SETS.forEach(function(s){delete data[s.path];});
   if(data.clientWorkflow){
     delete data.clientWorkflow.clients;delete data.clientWorkflow.handoffs;
@@ -1533,7 +1536,7 @@ function saveClient(){
   const p={name:tv('m-name'),office:tv('m-office'),owner:tv('m-owner'),status:tv('m-cstatus'),stage:tv('m-stage'),notes:tv('m-notes')};
   if(!p.name){toast('Name required.');return;}
   const eid=Number((document.getElementById('m-eid')||{}).value||0);
-  if(eid){Object.assign(S.clients.find(function(c){return c.id===eid;})||{},p);}else S.clients.push({id:S.nextId++,...p});
+  if(eid){Object.assign(S.clients.find(function(c){return c.id===eid;})||{},p);}else S.clients.push({id:newRecId(),...p});
   fbSave();closeModal();renderAll();toast('Saved.');
 }
 function deleteClient(id){S.clients=S.clients.filter(function(c){return c.id!==id;});fbSave();renderAll();}
